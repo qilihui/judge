@@ -19,7 +19,7 @@ struct run_result run(struct run_parameter parameter)
         pid_t pid = fork();
         if(pid==0){
             struct rlimit lim;
-            lim.rlim_cur=lim.rlim_max=parameter.time+1;
+            lim.rlim_cur=lim.rlim_max=parameter.time/1000+1;
             setrlimit(RLIMIT_CPU,&lim);
             lim.rlim_cur=lim.rlim_max=parameter.memory*__MB__*2;
             setrlimit(RLIMIT_AS,&lim);
