@@ -1,0 +1,6 @@
+{
+    "C_Cpp.clang_format_fallbackStyle": "WebKit",
+    "files.associations": {
+        "inet.h": "c"
+    }
+}
