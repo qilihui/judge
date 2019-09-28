@@ -115,8 +115,7 @@ int main()
     listen(sockfd, 5);
 	
     while (1) {
-        int len = sizeof(cli);
-        int c = accept(sockfd, (struct sockaddr*)&cli, &len);
+        int c = accept(sockfd, (struct sockaddr*)&cli, sizeof(cli));
         if (c < 0)
             continue;
         char buff[1024] = { 0 }; //短连接不需要循环读取

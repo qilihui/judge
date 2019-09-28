@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Code Online Judge</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+    <link type="text/css" rel="styleSheet" href="css/index.css" />
+</head>
+
+<body>
+
+    <ul class="layui-nav layui-bg-white">
+        <div>
+            <a href="javascript:;" class="logo-a"><img src="img/logo.png" class="logo">&nbsp;&nbsp;&nbsp;Code Online Judge</a>
+            <li class="layui-nav-item" style="margin-left: 50px;"><a href=""><span>Home</span></a></li>
+            <li class="layui-nav-item layui-this"><a href="problems.html">Problems</a></li>
+            <li class="layui-nav-item"><a href="">Contests</a></li>
+            <li class="layui-nav-item"><a href="javascript:;">Status</a></li>
+            <li class="layui-nav-item"><a href="">Rank</a></li>
+            <li class="layui-nav-item">
+                <a href="javascript:;">About</a>
+                <dl class="layui-nav-child">
+                    <dd><a href="">移动模块</a></dd>
+                    <dd><a href="">后台模版</a></dd>
+                    <dd class="layui-this"><a href="">选中项</a></dd>
+                    <dd><a href="">电商平台</a></dd>
+                </dl></li>
+            <li class="layui-nav-item" style="float: right;">
+                <a href=""><img src="http://pic41.nipic.com/20140517/2531170_131005066000_2.jpg" class="layui-nav-img">我</a>
+                <dl class="layui-nav-child">
+                    <dd><a href="javascript:;">修改信息</a></dd>
+                    <dd><a href="javascript:;">安全管理</a></dd>
+                    <dd><a href="javascript:;">退了</a></dd>
+                </dl>
+            </li>
+        </div>
+    </ul>
+
+    <div style="padding: 20px; background-color: #F2F2F2;">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md10">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <span><a href="javascript:;" onclick="window.history.back();"><i class="layui-icon" style="font-size: 25px;">&#xe65c;&nbsp;&nbsp;&nbsp;&nbsp;</i></a></span>
+                        <span>A + B Problem</span>
+                    </div>
+                    <div class="layui-card-body">
+                        <h2 style="color: blue;">Description</h2>
+                        <div class="topic">
+                            <fieldset class="layui-elem-field">
+                                <div class="layui-field-box">
+                                    <p>这是问题有一天, GZS得到一本古代的英文字典,
+                                        很可惜, 由于年代久远, 很多单词都看不清楚了. 但是, 
+                                        这怎么能难倒我们的G神呢, G神想要用这本字典查询一些单词,
+                                        下面给出字典中的内容. 字典中的单词全部由小写字母组成, 
+                                        字迹模糊的部分用'?'或者'*'来表示, '?'可以匹配一个小写字母,
+                                        '*'可以匹配0个或者1个或者多个小写字母. 例如, a?b可以代表aab,
+                                            abb......azb, 而a*b可以代表ab, aab, abb...azb, aaab, aabb.
+                                            .....然后给出一部分待查找的单词, 全部由小写字母组成. 如果能在
+                                            字典中找到这个单词, 请输出1, 否则, 输出0.对于这种小事GZS
+                                            觉得很是无聊, 你快来写个程序帮帮他吧.
+                                    </p>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <br>
+                        <h2 style="color: blue;">Input</h2>
+                        <div class="topic">
+                            <fieldset class="layui-elem-field">
+                                <div class="layui-field-box">
+                                    <p>第一行包含一个整数T(T <= 1000), 表示测试数据的组数.
+                                        每组测试数据的第一行有两个整数n(0 < n < 1000) 和m 
+                                        (0 < m < 1000), 分别表示字典中单词的数目和待查找的单词的
+                                        数目接下来n行, 代表字典中的单词, 每个单词由小写字母和'?'
+                                        以及'*'组成, 单词长度不超过6.接下来m行, 
+                                        代表待查找的单词, 每个单词由小写字母组成, 单词长度不超过20.
+                                    </p>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <br>
+                        <h2 style="color: blue;">Output</h2>
+                        <div class="topic">
+                            <fieldset class="layui-elem-field">
+                                <div class="layui-field-box">
+                                    <p>第一行包含一个整数T(T <= 1000), 表示测试数据的组数.
+                                        每组测试数据的第一行有两个整数n(0 < n < 1000) 和m 
+                                        (0 < m < 1000), 分别表示字典中单词的数目和待查找的单词的
+                                        数目接下来n行, 代表字典中的单词, 每个单词由小写字母和'?'
+                                        以及'*'组成, 单词长度不超过6.接下来m行, 
+                                        代表待查找的单词, 每个单词由小写字母组成, 单词长度不超过20.
+                                    </p>
+                                </div>
+                            </fieldset>
+                        </div>
+
+                        <br>
+                        <h2 style="color: blue;">Sample Input 1</h2>
+                        <div class="topic">
+                            <fieldset class="layui-elem-field">
+                                <div class="layui-field-box">
+                                    <p>
+                                        2<br>
+                                        2 3<br>
+                                        *<br>
+                                        ?<br>
+                                    </p>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <br>
+                        <h2 style="color: blue;">Sample Output 1</h2>
+                        <div class="topic">
+                             <fieldset class="layui-elem-field">
+                                <div class="layui-field-box">
+                                    <p>
+                                        2<br>
+                                        2 3<br>
+                                        *<br>
+                                        ?<br>
+                                    </p>
+                                </div>
+                            </fieldset>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-col-md2">
+                <div class="layui-card">
+                    <div class="layui-card-header">卡片面板</div>
+                    <div class="layui-card-body">
+                        结合 layui 的栅格系统<br>
+                        轻松实现响应式布局
+                    </div>
+                </div>
+            </div>
+
+            <div class="layui-col-md10">
+                <div class="layui-card">
+                    <!-- <div class="layui-card-header">Editing area</div> -->
+                    <br>
+                    <form class="layui-form" action="http://192.168.8.141" method="POST">
+                        <div class="layui-form-item select-width">
+                            <label class="layui-form-label">Language:</label>
+                            <div class="layui-input-block">
+                                <select name="language" lay-verify="">
+                                    <!-- <option value="">C</option> -->
+                                    <option value="1">C</option>
+                                    <option value="2">C++</option>
+                                    <option value="3">Java</option>
+                                </select>  
+                            </div>
+                        </div>
+                        <div class="layui-card-body">
+                            <textarea name="src"  class="layui-textarea textareasubmit" style="resize:none" onkeydown="keyHandler(this)"></textarea>
+                        </div>
+                        <div>
+                            <div style="text-align: center;">
+                                <button type="submit" class="layui-btn layui-btn-radius layui-btn-normal">提交</button>
+                                <button type="reset" class="layui-btn layui-btn-radius layui-btn-normal">重置</button>
+                            </div>
+                            <div style="text-align: center;" ><br></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="layui/layui.js" charset="utf-8"></script>
+    <script src="js/jquery-1.12.0.min.js" charset="utf-8"></script>
+    <script src="js/auto-line-number.js" charset="utf-8"></script>
+    <script src="js/problem.js" charset="utf-8"></script>
+    <!-- 注意：如果你直接复制所有代码到本地，上述js路径需要改成你本地的 -->
+    <script>
+        layui.use('element', function () {
+            var element = layui.element; //导航的hover效果、二级菜单等功能，需要依赖element模块
+
+            //监听导航点击
+            element.on('nav(demo)', function (elem) {
+                //console.log(elem)
+                layer.msg(elem.text());
+            });
+        });
+
+        $(".textareasubmit").setTextareaCount({
+            width: "30px",
+            bgColor: "#E9E9E9",
+            color: "#000000",
+            display: "inline-block"
+        });
+        layui.use('form', function(){
+        var form = layui.form;
+  
+        //监听提交
+        form.on('submit(formDemo)', function(data){
+        layer.msg(JSON.stringify(data.field));
+            return false;
+            });
+        });
+    </script>
+
+</body>
+
+</html>

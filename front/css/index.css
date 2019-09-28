@@ -1,0 +1,81 @@
+.layui-nav .logo{
+    width: 40px;
+    height: auto;
+}
+
+body{
+    background-color: rgb(218, 216, 216);
+}
+
+.layui-bg-white{
+    position: fixed;
+    z-index: 100;
+    width: 100%;
+}
+
+.layui-col-space15{
+    z-index: 0;
+    margin-top: 45px;
+}
+
+.layui-bg-white a{
+    /* background-color: rgb(247, 247, 247) !important; */
+    color: rgb(0, 0, 0) !important;
+}
+
+.layui-nav .layui-nav-more {
+    border-top-color: rgba(0, 0, 0, 0.7)
+}
+
+.layui-nav .layui-nav-mored,
+.layui-nav-itemed>a .layui-nav-more {
+    border-color: transparent transparent rgb(0, 0, 0)
+}
+
+.layui-nav .layui-nav-child dd.layui-this a,
+.layui-nav-child dd.layui-this {
+    background-color: rgb(125, 197, 255);
+    color: #fff
+}
+
+.layui-card-header {
+    height: 50px;
+}
+
+.layui-card-header span{
+    font-size: 20px;
+    float: left;
+    margin-top: 5px;
+}
+
+tr a:hover{
+    color: blue;
+}
+
+tr a{
+    display:block;
+    width:250px;
+    /* height:30px; */
+    border:1px solid rgba(255, 254, 254, 0);
+}
+
+.layui-card-body .topic{
+    margin-left: 20px;
+    margin-top: 20px;
+}
+
+.textareasubmit{
+    height: 400px;
+    background-color: rgb(248, 248, 248);
+}
+
+.select-width div{
+    width: 100px;
+    /* margin:0 auto; */
+    /* text-align: center; */
+}
+
+.layui-form-select dl dd.layui-this {
+    background-color: rgb(64, 140, 255);
+    color: #fff
+}
