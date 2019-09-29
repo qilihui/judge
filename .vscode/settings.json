@@ -2,6 +2,25 @@
     "C_Cpp.clang_format_fallbackStyle": "WebKit",
     "files.associations": {
         "inet.h": "c",
-        "stat.h": "c"
-    }
+        "stat.h": "c",
+        "event.h": "c",
+        "evhttp.h": "c",
+        "socket.h": "c",
+        "listener.h": "c",
+        "evhtp.h": "c",
+        "stdio.h": "c"
+    },
+    "configurations": [
+
+        {
+        
+        "name": "Linux",
+        
+        "includePath": [
+        
+        "${workspaceFolder}/**",
+        
+        "/usr/src/linux-headers-4.15.0-36-generic/include/" //此处添加头文件路径，
+        
+        ]
 }
