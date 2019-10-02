@@ -15,7 +15,7 @@ struct compile_parameter
 struct compile_result
 {
     int right;  //正确？    1正确   0错误
-    // char *return_path;  //编译器返回信息路径
+    const char *return_info_name;  //编译器返回信息名
     const char *return_name;  //返回信息文件名
 };
 
