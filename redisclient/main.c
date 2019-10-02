@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 struct compile_parameter compile_parameter;
@@ -19,10 +20,12 @@ cJSON* receive_time;
 cJSON* receive_memory;
 cJSON* receive_id;
 cJSON* receive_problem_id;
+redisContext* c;
+redisReply* reply;
 char err[200];
 const char* WORK_DIR = "/home/tom/judge_path";
-int judge_num=3;
-int judge[10]={0};
+int judge_num = 3;
+int judge[10] = { 0 };
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -56,10 +59,113 @@ void clear_work_dir(int run_num)
     sprintf(a, "/bin/rm %s/run%d/*", WORK_DIR, run_num);
     system(a);
 }
+void exec_child(int judge_flag)
+{
+    int run_num = judge_flag;
+    if (!json_decode(reply->element[1]->str)) {
+        printf("%s\n", err);
+        cJSON_Delete(json);
+        judge[judge_flag]=0;
+        exit(1);
+    }
+    FILE* src_file;
+    char srcfile_path[100];
+    char run_dir[100];
+    sprintf(run_dir, "%s/run%d", WORK_DIR, run_num);
+    compile_parameter.file_path = run_dir;
+    if (receive_language->valueint == LANGUAGE_C) {
+        sprintf(srcfile_path, "%s/run%d/main.c", WORK_DIR, run_num);
+        src_file = fopen(srcfile_path, "w");
+        compile_parameter.file_name = "main.c";
+        compile_parameter.language = LANGUAGE_C;
+    } else if (receive_language->valueint == LANGUAGE_CPP) {
+
+    } else if (receive_language->valueint == LANGUAGE_JAVA) {
+
+    } else {
+    }
+    if (src_file == NULL) {
+        strcpy(err, "redis_client: Cannot open source file");
+        printf("%s\n", err);
+        cJSON_Delete(json);
+        judge[judge_flag]=0;
+        exit(2);
+    }
+    fprintf(src_file, "%s", receive_src->valuestring);
+    fclose(src_file);
+    compile_result = compile(compile_parameter);
+    char testcase_dir[100];
+    sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_problem_id->valueint);
+    if (compile_result.right) {
+        printf("compile right\n");
+        run_parameter.file_path = run_dir;
+        run_parameter.file_name = compile_result.return_name;
+        run_parameter.case_path = testcase_dir;
+        run_parameter.language = receive_language->valueint;
+        run_parameter.time = receive_time->valueint;
+        run_parameter.memory = receive_memory->valueint;
+        run_result = run(run_parameter);
+        retjson = cJSON_CreateObject();
+        cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
+        cJSON_AddNumberToObject(retjson, "result", run_result.result);
+        cJSON_AddNumberToObject(retjson, "time", run_result.time);
+        cJSON_AddNumberToObject(retjson, "memory", run_result.memory);
+        printf("******run end\ntime=%d\nmemory=%d\nresult=%d\n********\n", run_result.time, run_result.memory, run_result.result);
+    } else {
+        printf("compile wrong\n");
+        retjson = cJSON_CreateObject();
+        cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
+        cJSON_AddNumberToObject(retjson, "result", 0);
+        cJSON_AddNumberToObject(retjson, "time", 0);
+        cJSON_AddNumberToObject(retjson, "memory", 0);
+    }
+    char compileinfo_path[100];
+    sprintf(compileinfo_path, "%s/run%d/%s", WORK_DIR, run_num, compile_result.return_info_name);
+    FILE* fp = fopen(compileinfo_path, "r");
+    char compileinfo_str[8192];
+    char line[1000];
+    if (fp == NULL) {
+        strcpy(err, "open compile_info.out fail");
+        printf("%s\n", err);
+        cJSON_Delete(json);
+        cJSON_Delete(retjson);
+        clear_work_dir(run_num);
+        judge[judge_flag]=0;
+        exit(3);
+    }
+    while (!feof(fp)) {
+        line[0] = 0;
+        fgets(line, 1000, fp);
+        strcat(compileinfo_str, line);
+    }
+    fclose(fp);
+    printf("*****compile_info.out*****\n%s\n*********\n", compileinfo_str);
+    cJSON_AddStringToObject(retjson, "compile", compileinfo_str);
+    char* resultjson_str = cJSON_PrintUnformatted(retjson);
+    freeReplyObject(reply);
+    reply = redisCommand(c, "lpush result_json_str %s", resultjson_str);
+    if (reply->type == REDIS_REPLY_ERROR) {
+        strcpy(err, reply->str);
+        printf("%s\n", err);
+    } else if (reply->type == REDIS_REPLY_INTEGER) {
+        if (reply->integer != 1) {
+            strcpy(err, "reply: execute lpush decode, return integer != 1");
+            printf("%s\n", err);
+        }
+    } else {
+        strcpy(err, "reply: execute lpush decode unknown error");
+        printf("%s\n", err);
+    }
+    compileinfo_str[0] = 0;
+    cJSON_Delete(json);
+    cJSON_Delete(retjson);
+    clear_work_dir(run_num);
+    exit(0);
+}
 int main()
 {
     chdir(WORK_DIR);
-    redisContext* c = redisConnect("127.0.0.1", 6379);
+    c = redisConnect("127.0.0.1", 6379);
     if (c == NULL || c->err) {
         if (c) {
             printf("Error: %s\n", c->errstr);
@@ -68,7 +174,6 @@ int main()
             printf("Can't allocate redis context\n");
         }
     }
-    redisReply* reply;
     while (1) {
         printf("\n\n开始执行blpop\n");
         reply = redisCommand(c, "blpop source_json_str 100");
@@ -87,118 +192,33 @@ int main()
                     printf("%d) %s\n", i, reply->element[i]->str);
                 }
             }
-            pid_t pid=0;
-            int judge_flag=0;
-            for(;judge_flag<judge_num;judge_flag++){
-                if(judge[judge_flag]==0)
+            if (num < 2) {
+                strcpy(err, "redisclient: blpop value < 2");
+                printf("%s", err);
+            }
+            pid_t pid = 0;
+            int judge_flag = 0;
+            for (; judge_flag < judge_num; judge_flag++) {
+                if (judge[judge_flag] == 0)
                     break;
             }
-            if(judge_flag==judge_num){
-
-            }else{
-                pid=fork();
-            }
-            if(pid==0){
-
-            }else{
-                
-            }
-            int run_num = 0;
-            if (num >= 2 && !json_decode(reply->element[1]->str)) {
-                printf("%s\n", err);
-                cJSON_Delete(json);
-                continue;
-            }
-            FILE* src_file;
-            char srcfile_path[100];
-            char run_dir[100];
-            sprintf(run_dir, "%s/run%d", WORK_DIR, run_num);
-            compile_parameter.file_path = run_dir;
-            if (receive_language->valueint == LANGUAGE_C) {
-                sprintf(srcfile_path, "%s/run%d/main.c", WORK_DIR, run_num);
-                src_file = fopen(srcfile_path, "w");
-                compile_parameter.file_name = "main.c";
-                compile_parameter.language = LANGUAGE_C;
-            } else if (receive_language->valueint == LANGUAGE_CPP) {
-
-            } else if (receive_language->valueint == LANGUAGE_JAVA) {
-
-            } else {
-            }
-            if (src_file == NULL) {
-                strcpy(err, "redis_client: Cannot open source file");
-                printf("%s\n", err);
-                cJSON_Delete(json);
-                continue;
-            }
-            fprintf(src_file, "%s", receive_src->valuestring);
-            fclose(src_file);
-            compile_result = compile(compile_parameter);
-            char testcase_dir[100];
-            sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_problem_id->valueint);
-            if (compile_result.right) {
-                printf("compile right\n");
-                run_parameter.file_path = run_dir;
-                run_parameter.file_name = compile_result.return_name;
-                run_parameter.case_path = testcase_dir;
-                run_parameter.language = receive_language->valueint;
-                run_parameter.time = receive_time->valueint;
-                run_parameter.memory = receive_memory->valueint;
-                run_result = run(run_parameter);
-                retjson = cJSON_CreateObject();
-                cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
-                cJSON_AddNumberToObject(retjson, "result", run_result.result);
-                cJSON_AddNumberToObject(retjson, "time", run_result.time);
-                cJSON_AddNumberToObject(retjson, "memory", run_result.memory);
-                printf("******run end\ntime=%d\nmemory=%d\nresult=%d\n********\n", run_result.time, run_result.memory, run_result.result);
-            } else {
-                printf("compile wrong\n");
-                retjson = cJSON_CreateObject();
-                cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
-                cJSON_AddNumberToObject(retjson, "result", 0);
-                cJSON_AddNumberToObject(retjson, "time", 0);
-                cJSON_AddNumberToObject(retjson, "memory", 0);
-            }
-            char compileinfo_path[100];
-            sprintf(compileinfo_path, "%s/run%d/%s", WORK_DIR, run_num, compile_result.return_info_name);
-            FILE* fp = fopen(compileinfo_path, "r");
-            char compileinfo_str[8192];
-            char line[1000];
-            if (fp == NULL) {
-                strcpy(err, "open compile_info.out fail");
-                printf("%s\n", err);
-                cJSON_Delete(json);
-                cJSON_Delete(retjson);
-                clear_work_dir(run_num);
-                continue;
-            }
-            while (!feof(fp)) {
-                line[0] = 0;
-                fgets(line, 1000, fp);
-                strcat(compileinfo_str, line);
-            }
-            fclose(fp);
-            printf("*****compile_info.out*****\n%s\n*********\n", compileinfo_str);
-            cJSON_AddStringToObject(retjson, "compile", compileinfo_str);
-            char* resultjson_str = cJSON_PrintUnformatted(retjson);
-            freeReplyObject(reply);
-            reply = redisCommand(c, "lpush result_json_str %s", resultjson_str);
-            if (reply->type == REDIS_REPLY_ERROR) {
-                strcpy(err, reply->str);
-                printf("%s\n", err);
-            } else if (reply->type == REDIS_REPLY_INTEGER) {
-                if (reply->integer != 1) {
-                    strcpy(err, "reply: execute lpush decode, return integer != 1");
-                    printf("%s\n", err);
+            if (judge_flag == judge_num) {
+                int status=0;
+                pid_t end_process = wait(&status);
+                for(int i=0;i<judge_num;i++){
+                    if(judge[i]==end_process){
+                        judge[i]=0;
+                    }
                 }
-            } else {
-                strcpy(err, "reply: execute lpush decode unknown error");
-                printf("%s\n", err);
             }
-            compileinfo_str[0] = 0;
-            cJSON_Delete(json);
-            cJSON_Delete(retjson);
-            clear_work_dir(run_num);
+            pid = fork();
+            if (pid == 0) {
+                exec_child(judge_flag);
+            } else if (pid > 0) {
+                judge[judge_flag] = pid;
+            }else{
+
+            }
 
         } else {
             strcpy(err, "reply: execute blpop decode json unknown error");
