@@ -1,5 +1,6 @@
 /*
 * gcc -g -o http-server http-server.c -levent
+* https://www.cnblogs.com/lit10050528/p/6168465.html
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,14 @@
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "cJSON.h"
 
+void run_init(char *s){
+    printf("\n\ncjson\n%s\n",s);
+    cJSON *json1=cJSON_Parse(s);
+    cJSON *src=cJSON_GetObjectItem(json1,"test_case_id");
+    printf("***************\n%s\n*************",src->valuestring);
+}
 char uri_root[512];
 
 static const struct table_entry {
@@ -120,17 +128,21 @@ void dump_request_cb(struct evhttp_request *req, void *arg)
 
     buf = evhttp_request_get_input_buffer(req);
     puts("Input data: <<<<");
+    char requestcontent[99999];
     while (evbuffer_get_length(buf))
     {
         int n;
-        char cbuf[128];
+        char cbuf[8192];
         n = evbuffer_remove(buf, cbuf, sizeof(cbuf));
         if (n > 0)
         {
             (void)fwrite(cbuf, 1, n, stdout);
+            strcat(requestcontent,cbuf);
         }
+        printf("*****");
     }
-    puts(">>>");
+    run_init(requestcontent);
+    puts(">>>\n");
 
     evhttp_send_reply(req, 200, "ok", NULL);
 }
