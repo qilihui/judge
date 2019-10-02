@@ -59,13 +59,12 @@ void clear_work_dir(int run_num)
     sprintf(a, "/bin/rm %s/run%d/*", WORK_DIR, run_num);
     system(a);
 }
-void exec_child(int judge_flag)
+void exec_child(int judge_flag, char* str)
 {
     int run_num = judge_flag;
-    if (!json_decode(reply->element[1]->str)) {
+    if (!json_decode(str)) {
         printf("%s\n", err);
         cJSON_Delete(json);
-        judge[judge_flag]=0;
         exit(1);
     }
     FILE* src_file;
@@ -88,7 +87,6 @@ void exec_child(int judge_flag)
         strcpy(err, "redis_client: Cannot open source file");
         printf("%s\n", err);
         cJSON_Delete(json);
-        judge[judge_flag]=0;
         exit(2);
     }
     fprintf(src_file, "%s", receive_src->valuestring);
@@ -130,7 +128,6 @@ void exec_child(int judge_flag)
         cJSON_Delete(json);
         cJSON_Delete(retjson);
         clear_work_dir(run_num);
-        judge[judge_flag]=0;
         exit(3);
     }
     while (!feof(fp)) {
@@ -148,10 +145,7 @@ void exec_child(int judge_flag)
         strcpy(err, reply->str);
         printf("%s\n", err);
     } else if (reply->type == REDIS_REPLY_INTEGER) {
-        if (reply->integer != 1) {
-            strcpy(err, "reply: execute lpush decode, return integer != 1");
-            printf("%s\n", err);
-        }
+        printf("exec success\n");
     } else {
         strcpy(err, "reply: execute lpush decode unknown error");
         printf("%s\n", err);
@@ -175,8 +169,8 @@ int main()
         }
     }
     while (1) {
-        printf("\n\n开始执行blpop\n");
-        reply = redisCommand(c, "blpop source_json_str 100");
+        printf("\n\n开始执行brpop\n");
+        reply = redisCommand(c, "brpop source_json_str 100");
         if (reply->type == REDIS_REPLY_NIL) {
             printf("Waiting for timeout\n");
             freeReplyObject(reply);
@@ -193,7 +187,7 @@ int main()
                 }
             }
             if (num < 2) {
-                strcpy(err, "redisclient: blpop value < 2");
+                strcpy(err, "redisclient: brpop value < 2");
                 printf("%s", err);
             }
             pid_t pid = 0;
@@ -203,21 +197,30 @@ int main()
                     break;
             }
             if (judge_flag == judge_num) {
-                int status=0;
-                pid_t end_process = wait(&status);
-                for(int i=0;i<judge_num;i++){
-                    if(judge[i]==end_process){
-                        judge[i]=0;
+                int status = 0;
+                pid_t end_process = waitpid(-1, &status, 0);
+                for (int i = 0; i < judge_num; i++) {
+                    if (judge[i] == end_process) {
+                        judge[i] = 0;
+                        judge_flag = i;
                     }
                 }
             }
             pid = fork();
             if (pid == 0) {
-                exec_child(judge_flag);
+                exec_child(judge_flag, reply->element[1]->str);
             } else if (pid > 0) {
                 judge[judge_flag] = pid;
-            }else{
-
+            } else {
+            }
+            pid_t end_process = 0;
+            while (end_process = waitpid(-1, NULL, WNOHANG) > 0) {
+                for (int i = 0; i < judge_num; i++) {
+                    if (end_process == judge[i]) {
+                        judge[i] = 0;
+                        break;
+                    }
+                }
             }
 
         } else {
