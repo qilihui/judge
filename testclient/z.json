@@ -5,3 +5,19 @@
     "time": 1000,
     "memory": -1
 }
+
+{
+    "id": 1,
+    "compilelog": "",
+    "result": 1,
+    "time": 200,
+    "memory": 20
+}
+
+{
+    "id": 1,
+    "compilelog": "",
+    "result": 0,
+    "time": 0,
+    "memory": 0
+}
