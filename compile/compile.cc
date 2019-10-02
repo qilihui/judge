@@ -24,7 +24,7 @@ struct compile_result complile(struct compile_parameter parameter)
         if(parameter.language == LANGUAGE_C){
             // freopen("/home/tom/work/out.out","w",stdout);
             freopen("compile_info.out","w",stderr);
-            const char *c_compile[] = {"gcc",(const char*)parameter.file_name,"-o","main",NULL};
+            const char *c_compile[] = {"gcc",(const char*)parameter.file_name,"-o","main","-lm",NULL};
             // sprintf(c_compile[1],"%s/%s",parameter.file_path,parameter.file_name);
             execvp("gcc",(char *const*)c_compile);
         }else if(parameter.language ==LANGUAGE_CPP){
