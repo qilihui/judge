@@ -32,7 +32,6 @@ struct run_result run(struct run_parameter parameter)
     struct run_result result;
     //跳转到工作目录
     chdir((const char*)parameter.file_path);
-    system("pwd");
     result.memory = 0;
     result.result = 0;
     result.time = 0;

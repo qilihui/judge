@@ -1,20 +1,25 @@
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <stdlib.h>
+#include <unistd.h>
 int main()
 {
-    pid_t pid = fork();
-    if(pid==0){
-        exit(0);
-        return 0;
-    }else if(pid >0){
-        int status=0;
-        int ret = wait(&status);
-        printf("status = %d\n",status>>8);
-        printf("ret = %d\n",ret);
-    }else{
-        printf("fork fail\n");
+    char* a = (char*)malloc(sizeof(char) * 100);
+    for (int i = 0; i < 99; i++) {
+        a[i] = i + '0';
     }
+    a[99] = 0;
+    const char* p = a;
+    printf("%s\n", p);
+    // pid_t pid = fork();
+    // if (pid == 0) {
+    //     execlp("./child","child",a,NULL);
+    // } else if (pid > 0) {
+    free(a);
+    printf("%s\n", a);
+    printf("%s\n", p);
+    // } else {
+    //     printf("fork fail\n");
+    // }
 }
