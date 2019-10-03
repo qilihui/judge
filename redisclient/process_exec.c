@@ -103,7 +103,10 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         compile_parameter.file_name = "main.c";
         compile_parameter.language = LANGUAGE_C;
     } else if (receive_language->valueint == LANGUAGE_CPP) {
-
+        sprintf(srcfile_path, "%s/run%d/main.cpp", WORK_DIR, run_num);
+        src_file = fopen(srcfile_path, "w");
+        compile_parameter.file_name = "main.cpp";
+        compile_parameter.language = LANGUAGE_CPP;
     } else if (receive_language->valueint == LANGUAGE_JAVA) {
 
     } else {
@@ -180,7 +183,7 @@ int main(int argc, char** argv)
     char log_path_arr[100];
     sprintf(log_path_arr,"%s/log/run%s.log",WORK_DIR,argv[1]);
     log_path = log_path_arr;
-    write_log("运行process_manager");
+    write_log("运行process_exec");
     int judge_flag = atoi(argv[1]);
     const char* str = argv[2];
     WORK_DIR = argv[3];

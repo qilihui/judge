@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 cJSON* json;
 cJSON* retjson;
@@ -24,17 +24,17 @@ const char* WORK_DIR = "/home/tom/judge_path";
 int judge_num = 3;
 int judge[10] = { 0 };
 char time_str[30];
-FILE *log_file;
-const char *log_path;
-void write_log(const char *s)
+FILE* log_file;
+const char* log_path;
+void write_log(const char* s)
 {
     time_t t;
-    struct tm *lt;
+    struct tm* lt;
     time(&t);
     lt = localtime(&t);
-    sprintf(time_str,"%d-%d-%d %d:%d:%d",lt->tm_year+1990,lt->tm_mon,lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
-    log_file = fopen(log_path,"a");
-    fprintf(log_file,"%s  %s\n",time_str,s);
+    sprintf(time_str, "%d-%d-%d %d:%d:%d", lt->tm_year + 1990, lt->tm_mon, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
+    log_file = fopen(log_path, "a");
+    fprintf(log_file, "%s  %s\n", time_str, s);
     fclose(log_file);
 }
 /*
@@ -68,7 +68,7 @@ int json_decode(const char* str)
 int main()
 {
     char log_path_arr[100];
-    sprintf(log_path_arr,"%s/log/manager.log",WORK_DIR);
+    sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
     write_log("运行process_manager");
     c = redisConnect("127.0.0.1", 6379);
@@ -115,7 +115,15 @@ int main()
                 freeReplyObject(reply);
                 continue;
             }
-
+            pid_t end_process = 0;
+            while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
+                for (int i = 0; i < judge_num; i++) {
+                    if (end_process == judge[i]) {
+                        judge[i] = 0;
+                        break;
+                    }
+                }
+            }
             pid_t pid = 0;
             int judge_flag = 0;
             for (; judge_flag < judge_num; judge_flag++) {
@@ -136,18 +144,11 @@ int main()
             if (pid == 0) {
                 char judge_flag_str[3];
                 sprintf(judge_flag_str, "%d", judge_flag);
+                sprintf(err, "./process_exec %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR);
+                write_log(err);
                 execlp("/home/tom/work/redisclient/process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR, NULL);
             } else if (pid > 0) {
                 judge[judge_flag] = pid;
-            }
-            pid_t end_process = 0;
-            while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
-                for (int i = 0; i < judge_num; i++) {
-                    if (end_process == judge[i]) {
-                        judge[i] = 0;
-                        break;
-                    }
-                }
             }
             freeReplyObject(reply);
             continue;
