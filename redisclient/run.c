@@ -59,6 +59,7 @@ struct run_result run(struct run_parameter parameter)
             freopen(user_out, "w", stdout);
             freopen("err.out", "w", stderr);
             // printf("开始执行\n");
+            chroot(parameter.file_path);
             execl((const char*)file_name, (const char*)file_name, NULL);
             // system("pwd");
             // system("./main");

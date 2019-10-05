@@ -18,7 +18,7 @@ struct compile_result compile(struct compile_parameter parameter)
         setrlimit(RLIMIT_CPU,&lim);
         freopen("compile_info.out","w",stderr);
         if(parameter.language == LANGUAGE_C){
-            execlp("/usr/bin/gcc","gcc",parameter.file_name,"-o","main","-lm",NULL);
+            execlp("/usr/bin/gcc","gcc",parameter.file_name,"-o","main","-lm","-fmax-errors=5",NULL);
         }else if(parameter.language ==LANGUAGE_CPP){
             execlp("/usr/bin/g++","g++",parameter.file_name,"-o","main","-lm",NULL);
         }else if(parameter.language ==LANGUAGE_JAVA){

@@ -33,7 +33,7 @@ void write_log(const char *s)
     struct tm *lt;
     time(&t);
     lt = localtime(&t);
-    sprintf(time_str,"%d-%d-%d %d:%d:%d",lt->tm_year+1990,lt->tm_mon,lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
+    sprintf(time_str,"%d-%d-%d %d:%d:%d",lt->tm_year+1900,lt->tm_mon,lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
     log_file = fopen(log_path,"a");
     fprintf(log_file,"%s  %s\n",time_str,s);
     fclose(log_file);
