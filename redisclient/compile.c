@@ -16,6 +16,10 @@ struct compile_result compile(struct compile_parameter parameter)
         struct rlimit lim;
         lim.rlim_cur=lim.rlim_max = 10;
         setrlimit(RLIMIT_CPU,&lim);
+        lim.rlim_cur=lim.rlim_max = 40*1048576;
+        setrlimit(RLIMIT_FSIZE,&lim);
+        lim.rlim_cur=lim.rlim_max = 512*1048576;
+        setrlimit(RLIMIT_AS,&lim);
         freopen("compile_info.out","w",stderr);
         if(parameter.language == LANGUAGE_C){
             execlp("/usr/bin/gcc","gcc",parameter.file_name,"-o","main","-lm","-fmax-errors=5",NULL);
