@@ -20,7 +20,7 @@ cJSON* receive_problem_id;
 redisContext* c;
 redisReply* reply;
 char err[200];
-const char* WORK_DIR = "/home/tom/judge_path";
+const char* WORK_DIR = "/judge_path";
 int judge_num = 3;
 int judge[10] = { 0 };
 char time_str[30];
@@ -71,7 +71,7 @@ int main()
     sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
     write_log("运行process_manager");
-    c = redisConnect("127.0.0.1", 6379);
+    c = redisConnect("172.17.0.3", 6379);
     if (c == NULL || c->err) {
         if (c) {
             // printf("Error: %s\n", c->errstr);

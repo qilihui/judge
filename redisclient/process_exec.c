@@ -23,7 +23,7 @@ cJSON* receive_problem_id;
 redisContext* c;
 redisReply* reply;
 char err[200];
-const char* WORK_DIR = "/home/tom/judge_path";
+const char* WORK_DIR = "/judge_path";
 char time_str[30];
 FILE *log_file;
 const char *log_path;
@@ -180,17 +180,17 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 
 int main(int argc, char** argv)
 {
-    char log_path_arr[100];
-    sprintf(log_path_arr,"%s/log/run%s.log",WORK_DIR,argv[1]);
-    log_path = log_path_arr;
-    write_log("运行process_exec");
     int judge_flag = atoi(argv[1]);
     const char* str = argv[2];
     WORK_DIR = argv[3];
     chdir(WORK_DIR);
+    char log_path_arr[100];
+    sprintf(log_path_arr,"%s/log/run%s.log",WORK_DIR,argv[1]);
+    log_path = log_path_arr;
+    write_log("运行process_exec");
     int status = 1;
     const char* resultjson_str = exec_child(judge_flag, str, &status);
-    c = redisConnect("127.0.0.1", 6379);
+    c = redisConnect("172.17.0.3", 6379);
     if (c == NULL || c->err) {
         if (c) {
             // printf("run%d  Error: %s\n", judge_flag, c->errstr);
