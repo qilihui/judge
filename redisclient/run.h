@@ -10,6 +10,7 @@
 //运行所需要的参数
 struct run_parameter
 {
+    const char *log_path;   //日志文件路径和名
     const char *file_path;    //工作目录 应包含可执行二进制文件
     const char *case_path;    //测试用例的输入输出文件路径
     const char *file_name;    //可执行文件名

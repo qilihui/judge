@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include "write_log.h"
 
 cJSON* json;
 cJSON* retjson;
@@ -23,20 +24,7 @@ char err[200];
 const char* WORK_DIR = "/judge_path";
 int judge_num = 3;
 int judge[10] = { 0 };
-char time_str[30];
-FILE* log_file;
 const char* log_path;
-void write_log(const char* s)
-{
-    time_t t;
-    struct tm* lt;
-    time(&t);
-    lt = localtime(&t);
-    sprintf(time_str, "%d-%d-%d %d:%d:%d", lt->tm_year + 1900, lt->tm_mon, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
-    log_file = fopen(log_path, "a");
-    fprintf(log_file, "%s  %s\n", time_str, s);
-    fclose(log_file);
-}
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -70,21 +58,21 @@ int main()
     char log_path_arr[100];
     sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
-    write_log("运行process_manager");
+    write_log(log_path,"运行process_manager");
     c = redisConnect("172.17.0.3", 6379);
     if (c == NULL || c->err) {
         if (c) {
             // printf("Error: %s\n", c->errstr);
-            write_log(c->errstr);
+            write_log(log_path,c->errstr);
             // handle error
         } else {
             // printf("Can't allocate redis context\n");
-            write_log("Can't allocate redis context");
+            write_log(log_path,"Can't allocate redis context");
         }
     }
     while (1) {
         // printf("开始执行\n");
-        write_log("开始执行while循环");
+        write_log(log_path,"开始执行while循环");
         pid_t end_process = 0;
         while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
             for (int i = 0; i < judge_num; i++) {
@@ -97,13 +85,13 @@ int main()
         reply = redisCommand(c, "brpop source_json_str 100");
         if (reply->type == REDIS_REPLY_NIL) {
             // printf("Waiting for timeout\n");
-            write_log("Waiting for timeout");
+            write_log(log_path,"Waiting for timeout");
             freeReplyObject(reply);
             continue;
         } else if (reply->type == REDIS_REPLY_ERROR) {
             // strcpy(err, reply->str);
             // printf("%s\n", err);
-            write_log(reply->str);
+            write_log(log_path,reply->str);
             freeReplyObject(reply);
             continue;
         } else if (reply->type == REDIS_REPLY_ARRAY) {
@@ -112,7 +100,7 @@ int main()
             for (i = 0; i < num; i++) {
                 if (reply->element[i]->type == REDIS_REPLY_STRING) {
                     // printf("%d) %s\n", i, reply->element[i]->str);
-                    // write_log(reply->element[i]->str);
+                    // write_log(log_path,reply->element[i]->str);
                 } else {
                     break;
                 }
@@ -120,7 +108,7 @@ int main()
             if (num < 2 || i != num) {
                 // strcpy(err, "redisclient: brpop value < 2");
                 // printf("%s", err);
-                write_log("redisclient: brpop value < 2 || num!=STRING");
+                write_log(log_path,"redisclient: brpop value < 2 || num!=STRING");
                 freeReplyObject(reply);
                 continue;
             }
@@ -145,8 +133,10 @@ int main()
                 char judge_flag_str[3];
                 sprintf(judge_flag_str, "%d", judge_flag);
                 sprintf(err, "子进程执行   ./process_exec %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR);
-                write_log(err);
-                execlp("/home/tom/work/redisclient/process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR, NULL);
+                write_log(log_path,err);
+                int res=execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR, NULL);
+                if(res==-1)
+                    write_log(log_path,"执行execlp错误");
             } else if (pid > 0) {
                 judge[judge_flag] = pid;
             }
@@ -156,7 +146,7 @@ int main()
             strcpy(err, "reply: execute brpop decode json unknown error");
             // printf("%s\n", err);
             // printf("type = %d\n", reply->type);
-            write_log("error type");
+            write_log(log_path,"error type");
             freeReplyObject(reply);
             continue;
         }

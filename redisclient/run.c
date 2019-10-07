@@ -1,4 +1,5 @@
 #include "run.h"
+#include "write_log.h"
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -32,20 +33,22 @@ struct run_result run(struct run_parameter parameter)
     struct run_result result;
     //跳转到工作目录
     chdir((const char*)parameter.file_path);
+    write_log(parameter.log_path, "进入run函数");
     result.memory = 0;
     result.result = 0;
     result.time = 0;
     const char* user_out = "user.out";
     const char* case_path = parameter.case_path;
-    for (int i = 1;1; i++) {
+    for (int i = 1; 1; i++) {
         char input_name[50];
         char file_name[50];
         sprintf(input_name, "%s/%d.in", case_path, i);
         sprintf(file_name, "./%s", parameter.file_name);
-        if (access((const char*)input_name, F_OK)==-1)
+        if (access((const char*)input_name, F_OK) == -1)
             break;
         pid_t pid = fork();
         if (pid == 0) {
+            write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
             lim.rlim_cur = lim.rlim_max = parameter.time / 1000 + 1;
             setrlimit(RLIMIT_CPU, &lim);
@@ -55,9 +58,18 @@ struct run_result run(struct run_parameter parameter)
             setrlimit(RLIMIT_FSIZE, &lim);
             lim.rlim_cur = lim.rlim_max = 1;
             setrlimit(RLIMIT_NPROC, &lim);
-            freopen((const char*)input_name, "r", stdin);
-            freopen(user_out, "w", stdout);
-            freopen("err.out", "w", stderr);
+            if (freopen((const char*)input_name, "r", stdin) == NULL) {
+                write_log(parameter.log_path, "进入run函数 子进程 打开stdin出错");
+                exit(3);
+            }
+            if (freopen(user_out, "w", stdout) == NULL) {
+                write_log(parameter.log_path, "进入run函数 子进程 打开stdout出错");
+                exit(3);
+            }
+            if (freopen("err.out", "w", stderr) == NULL) {
+                write_log(parameter.log_path, "进入run函数 子进程 打开stderr出错");
+                exit(3);
+            }
             // printf("开始执行\n");
             chroot(parameter.file_path);
             execl((const char*)file_name, (const char*)file_name, NULL);
@@ -77,11 +89,18 @@ struct run_result run(struct run_parameter parameter)
             if (result.memory < rusage.ru_maxrss) {
                 result.memory = rusage.ru_maxrss;
             }
+            if (status >> 8 == 3) {
+                result.result=__RESULT_SYSTEM_ERROR__;
+                result.memory=0;
+                result.time=0;
+                break;
+            }
             char problem_out[50];
             sprintf(problem_out, "%s/%d.out", case_path, i);
             FILE* f1 = fopen((const char*)problem_out, "r");
             FILE* f2 = fopen(user_out, "r");
             result.result = compare_out(f1, f2);
+            write_log(parameter.log_path, "进入run函数 文件比较结束");
             fclose(f1);
             fclose(f2);
             // printf("%d\n",rusage.ru_utime.tv_sec);

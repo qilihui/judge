@@ -5,14 +5,17 @@
 #include <sys/resource.h>
 #include <sys/types.h> 
 #include "compile.h"
+#include "write_log.h"
 
 
 struct compile_result compile(struct compile_parameter parameter)
 {
     struct compile_result result;
     chdir(parameter.file_path);
+    write_log(parameter.log_path,"进入compile函数");
     pid_t pid = fork();
     if(pid==0){
+        write_log(parameter.log_path,"进入compile函数 子进程");
         struct rlimit lim;
         lim.rlim_cur=lim.rlim_max = 10;
         setrlimit(RLIMIT_CPU,&lim);
@@ -38,6 +41,7 @@ struct compile_result compile(struct compile_parameter parameter)
         result.right = (!status);
         result.return_name = "main";
         result.return_info_name="compile_info.out";
+        write_log(parameter.log_path,"进入compile函数 编译结束");
     }
     return result;
 }
