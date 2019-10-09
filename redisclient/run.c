@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 int compare_out(FILE* f1, FILE* f2)
 {
@@ -48,6 +50,7 @@ struct run_result run(struct run_parameter parameter)
             break;
         pid_t pid = fork();
         if (pid == 0) {
+            printf("out 1\n");
             write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
             lim.rlim_cur = lim.rlim_max = parameter.time / 1000 + 1;
@@ -70,9 +73,17 @@ struct run_result run(struct run_parameter parameter)
                 write_log(parameter.log_path, "进入run函数 子进程 打开stderr出错");
                 exit(3);
             }
-            // printf("开始执行\n");
+            printf("out 2\n");
+            printf("开始执行\n");
             chroot(parameter.file_path);
-            execl((const char*)file_name, (const char*)file_name, NULL);
+            system("pwd");
+            if (execl((const char*)file_name, (const char*)file_name, NULL) == -1) {
+                printf("%s",strerror(errno));
+                char a[100];
+                sprintf(a,"%s",strerror(errno));
+                write_log(parameter.log_path,a);
+                exit(3);
+            }
             // system("pwd");
             // system("./main");
         } else {
@@ -90,11 +101,14 @@ struct run_result run(struct run_parameter parameter)
                 result.memory = rusage.ru_maxrss;
             }
             if (status >> 8 == 3) {
-                result.result=__RESULT_SYSTEM_ERROR__;
-                result.memory=0;
-                result.time=0;
-                break;
+                result.result = __RESULT_SYSTEM_ERROR__;
+                result.memory = 0;
+                result.time = 0;
+                return result;
             }
+            char log_arr[20];
+            sprintf(log_arr, "执行status=%d", status >> 8);
+            write_log(parameter.log_path, log_arr);
             char problem_out[50];
             sprintf(problem_out, "%s/%d.out", case_path, i);
             FILE* f1 = fopen((const char*)problem_out, "r");

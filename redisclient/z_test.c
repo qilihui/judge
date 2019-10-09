@@ -8,6 +8,7 @@ int main()
     run_parameter.file_path="/home/tom/judge_path/run0";
     run_parameter.file_name="main";
     run_parameter.language=1;
+    run_parameter.log_path="/home/tom/judge_path/log/test.log";
     run_parameter.memory=10;
     run_parameter.time=10000;
     run_result=run(run_parameter);

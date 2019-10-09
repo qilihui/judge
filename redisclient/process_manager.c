@@ -1,6 +1,7 @@
 #include "cJSON.h"
 #include "compile.h"
 #include "run.h"
+#include "write_log.h"
 #include <hiredis/hiredis.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include "write_log.h"
 
 cJSON* json;
 cJSON* retjson;
@@ -25,6 +25,8 @@ const char* WORK_DIR = "/judge_path";
 int judge_num = 3;
 int judge[10] = { 0 };
 const char* log_path;
+const char* redis_ip = "127.0.0.1";
+const char* redis_port = "6379";
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -55,24 +57,59 @@ int json_decode(const char* str)
 
 int main()
 {
+    FILE* conf_fp = fopen("./judge.conf", "r");
+    char conf_arr[100];
+    char work_dir_arr[100];
+    char redis_ip_arr[20];
+    char redis_port_arr[10];
+    if (conf_fp == NULL) {
+    }
+    char* token;
+    for (int i = 0; !feof(conf_fp); i++) {
+        conf_arr[0] = 0;
+        fgets(conf_arr, 99, conf_fp);
+        strtok(conf_arr, "\"");
+        token = strtok(NULL, "\"");
+        switch (i) {
+        case 0:
+            strcpy(redis_ip_arr, token);
+            break;
+        case 1:
+            strcpy(redis_port_arr, token);
+            break;
+        case 2:
+            strcpy(work_dir_arr, token);
+            break;
+        default:
+            break;
+        }
+    }
+    fclose(conf_fp);
+    WORK_DIR = work_dir_arr;
+    redis_ip = redis_ip_arr;
+    redis_port = redis_port_arr;
     char log_path_arr[100];
     sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
-    write_log(log_path,"运行process_manager");
-    c = redisConnect("172.17.0.3", 6379);
+    write_log(log_path, "运行process_manager");
+    write_log(log_path,redis_ip);
+    write_log(log_path,redis_port);
+    write_log(log_path,WORK_DIR);
+    c = redisConnect(redis_ip, atoi(redis_port));
     if (c == NULL || c->err) {
         if (c) {
             // printf("Error: %s\n", c->errstr);
-            write_log(log_path,c->errstr);
+            write_log(log_path, c->errstr);
             // handle error
         } else {
             // printf("Can't allocate redis context\n");
-            write_log(log_path,"Can't allocate redis context");
+            write_log(log_path, "Can't allocate redis context");
         }
+        exit(1);
     }
     while (1) {
         // printf("开始执行\n");
-        write_log(log_path,"开始执行while循环");
+        write_log(log_path, "开始执行while循环");
         pid_t end_process = 0;
         while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
             for (int i = 0; i < judge_num; i++) {
@@ -85,13 +122,13 @@ int main()
         reply = redisCommand(c, "brpop source_json_str 100");
         if (reply->type == REDIS_REPLY_NIL) {
             // printf("Waiting for timeout\n");
-            write_log(log_path,"Waiting for timeout");
+            write_log(log_path, "Waiting for timeout");
             freeReplyObject(reply);
             continue;
         } else if (reply->type == REDIS_REPLY_ERROR) {
             // strcpy(err, reply->str);
             // printf("%s\n", err);
-            write_log(log_path,reply->str);
+            write_log(log_path, reply->str);
             freeReplyObject(reply);
             continue;
         } else if (reply->type == REDIS_REPLY_ARRAY) {
@@ -108,7 +145,7 @@ int main()
             if (num < 2 || i != num) {
                 // strcpy(err, "redisclient: brpop value < 2");
                 // printf("%s", err);
-                write_log(log_path,"redisclient: brpop value < 2 || num!=STRING");
+                write_log(log_path, "redisclient: brpop value < 2 || num!=STRING");
                 freeReplyObject(reply);
                 continue;
             }
@@ -132,11 +169,11 @@ int main()
             if (pid == 0) {
                 char judge_flag_str[3];
                 sprintf(judge_flag_str, "%d", judge_flag);
-                sprintf(err, "子进程执行   ./process_exec %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR);
-                write_log(log_path,err);
-                int res=execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR, NULL);
-                if(res==-1)
-                    write_log(log_path,"执行execlp错误");
+                sprintf(err, "子进程执行   ./process_exec %s %s %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR,redis_ip,redis_port);
+                write_log(log_path, err);
+                int res = execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR,redis_ip,redis_port, NULL);
+                if (res == -1)
+                    write_log(log_path, "执行execlp错误");
             } else if (pid > 0) {
                 judge[judge_flag] = pid;
             }
@@ -146,7 +183,7 @@ int main()
             strcpy(err, "reply: execute brpop decode json unknown error");
             // printf("%s\n", err);
             // printf("type = %d\n", reply->type);
-            write_log(log_path,"error type");
+            write_log(log_path, "error type");
             freeReplyObject(reply);
             continue;
         }
