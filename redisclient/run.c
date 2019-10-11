@@ -1,15 +1,15 @@
 #include "run.h"
 #include "write_log.h"
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <errno.h>
-#include <string.h>
 
 int compare_out(FILE* f1, FILE* f2)
 {
@@ -45,12 +45,11 @@ struct run_result run(struct run_parameter parameter)
         char input_name[50];
         char file_name[50];
         sprintf(input_name, "%s/%d.in", case_path, i);
-        sprintf(file_name, "./%s", parameter.file_name);
+        sprintf(file_name, "%s/%s", parameter.file_path, parameter.file_name);
         if (access((const char*)input_name, F_OK) == -1)
             break;
         pid_t pid = fork();
         if (pid == 0) {
-            printf("out 1\n");
             write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
             lim.rlim_cur = lim.rlim_max = parameter.time / 1000 + 1;
@@ -73,17 +72,28 @@ struct run_result run(struct run_parameter parameter)
                 write_log(parameter.log_path, "进入run函数 子进程 打开stderr出错");
                 exit(3);
             }
-            printf("out 2\n");
-            printf("开始执行\n");
-            chroot(parameter.file_path);
-            system("pwd");
-            if (execl((const char*)file_name, (const char*)file_name, NULL) == -1) {
-                printf("%s",strerror(errno));
-                char a[100];
-                sprintf(a,"%s",strerror(errno));
-                write_log(parameter.log_path,a);
+            char x[100];
+            getcwd(x, sizeof(x));
+            write_log(parameter.log_path,x);
+            write_log(parameter.log_path,"写入文件目录");
+            printf("chroot 之前\n");
+            if(chroot(parameter.file_path)){
+                write_log(parameter.log_path,strerror(errno));
                 exit(3);
             }
+            printf("chroot 之后\n");
+            getcwd(x, sizeof(x));
+            write_log(parameter.log_path,x);
+            write_log(parameter.log_path,"写入文件目录");
+            write_log(parameter.log_path,"chroot完成");
+            if (execl((const char*)file_name, (const char*)parameter.file_name, NULL) == -1) {
+                printf("%s", strerror(errno));
+                char a[100];
+                sprintf(a, "%s", strerror(errno));
+                write_log(parameter.log_path, a);
+                exit(3);
+            }
+            exit(0);
             // system("pwd");
             // system("./main");
         } else {
