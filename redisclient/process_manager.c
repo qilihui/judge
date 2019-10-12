@@ -27,6 +27,7 @@ int judge[10] = { 0 };
 const char* log_path;
 const char* redis_ip = "127.0.0.1";
 const char* redis_port = "6379";
+
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -63,6 +64,7 @@ void make_dir()
         system(a);
     }
 }
+
 int main()
 {
     FILE* conf_fp = fopen("./judge.conf", "r");
@@ -70,8 +72,11 @@ int main()
     char work_dir_arr[100];
     char redis_ip_arr[20];
     char redis_port_arr[10];
+
     if (conf_fp == NULL) {
+        exit(1);
     }
+
     char* token;
     for (int i = 0; !feof(conf_fp); i++) {
         conf_arr[0] = 0;
@@ -96,6 +101,7 @@ int main()
         }
     }
     fclose(conf_fp);
+
     WORK_DIR = work_dir_arr;
     redis_ip = redis_ip_arr;
     redis_port = redis_port_arr;
@@ -107,22 +113,23 @@ int main()
     write_log(log_path, redis_ip);
     write_log(log_path, redis_port);
     write_log(log_path, WORK_DIR);
+
     while (1) {
-        c = redisConnect(redis_ip, atoi(redis_port));
-        if (c == NULL || c->err) {
-            if (c) {
-                // printf("Error: %s\n", c->errstr);
-                write_log(log_path, c->errstr);
-                // handle error
-            } else {
-                // printf("Can't allocate redis context\n");
-                write_log(log_path, "Can't allocate redis context");
+        if (c == NULL) {
+            c = redisConnect(redis_ip, atoi(redis_port));
+            if (c == NULL || c->err) {
+                if (c) {
+                    write_log(log_path, c->errstr);
+                } else {
+                    write_log(log_path, "Can't allocate redis context");
+                }
+                continue;
             }
-            exit(1);
         }
-        // printf("开始执行\n");
+
         write_log(log_path, "开始执行while循环");
         pid_t end_process = 0;
+
         while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
             for (int i = 0; i < judge_num; i++) {
                 if (end_process == judge[i]) {
@@ -131,42 +138,34 @@ int main()
                 }
             }
         }
+
         reply = redisCommand(c, "brpop source_json_str 100");
         if (reply->type == REDIS_REPLY_NIL) {
-            // printf("Waiting for timeout\n");
             write_log(log_path, "Waiting for timeout");
-            freeReplyObject(reply);
-            continue;
         } else if (reply->type == REDIS_REPLY_ERROR) {
-            // strcpy(err, reply->str);
-            // printf("%s\n", err);
             write_log(log_path, reply->str);
-            freeReplyObject(reply);
-            continue;
         } else if (reply->type == REDIS_REPLY_ARRAY) {
             int num = reply->elements;
             int i = 0;
             for (i = 0; i < num; i++) {
-                if (reply->element[i]->type == REDIS_REPLY_STRING) {
-                    // printf("%d) %s\n", i, reply->element[i]->str);
-                    // write_log(log_path,reply->element[i]->str);
-                } else {
+                if (reply->element[i]->type != REDIS_REPLY_STRING) {
                     break;
                 }
             }
+
             if (num < 2 || i != num) {
-                // strcpy(err, "redisclient: brpop value < 2");
-                // printf("%s", err);
                 write_log(log_path, "redisclient: brpop value < 2 || num!=STRING");
                 freeReplyObject(reply);
                 continue;
             }
+
             pid_t pid = 0;
             int judge_flag = 0;
             for (; judge_flag < judge_num; judge_flag++) {
                 if (judge[judge_flag] == 0)
                     break;
             }
+
             if (judge_flag == judge_num) {
                 int status = 0;
                 pid_t end_process = waitpid(-1, &status, 0);
@@ -177,6 +176,7 @@ int main()
                     }
                 }
             }
+
             pid = fork();
             if (pid == 0) {
                 char judge_flag_str[3];
@@ -189,16 +189,14 @@ int main()
             } else if (pid > 0) {
                 judge[judge_flag] = pid;
             }
-            freeReplyObject(reply);
-            continue;
+
         } else {
             strcpy(err, "reply: execute brpop decode json unknown error");
-            // printf("%s\n", err);
-            // printf("type = %d\n", reply->type);
             write_log(log_path, "error type");
-            freeReplyObject(reply);
-            continue;
         }
-        redisFree(c);
+
+        if (reply != NULL) {
+            freeReplyObject(reply);
+        }
     }
 }

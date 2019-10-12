@@ -46,6 +46,7 @@ void cp_lib()
     system("cp /lib64/ld-linux-x86-64.so.2 ./lib64/");
     system("chmod 777 -R ./*");
 }
+
 struct run_result run(struct run_parameter parameter)
 {
     struct run_result result;
@@ -58,12 +59,14 @@ struct run_result run(struct run_parameter parameter)
     result.time = 0;
     const char* user_out = "user.out";
     const char* case_path = parameter.case_path;
+
     for (int i = 1; 1; i++) {
         char input_name[50];
         sprintf(input_name, "%s/%d.in", case_path, i);
         if (access((const char*)input_name, F_OK) == -1)
             break;
         pid_t pid = fork();
+
         if (pid == 0) {
             write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
@@ -152,6 +155,7 @@ struct run_result run(struct run_parameter parameter)
             }
         }
     }
+    
     result.memory /= 1024;
     if (result.time > parameter.time) {
         result.result = __RESULT_TIME_LIMIT_EXCEEDED__;

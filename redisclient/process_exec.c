@@ -74,18 +74,21 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 {
     *status = 0;
     int run_num = judge_flag;
+    
     if (!json_decode(str)) {
         // printf("%s\n", err);
         cJSON_Delete(json);
         *status = -1;
         return NULL;
     }
+
     write_log(log_path, "json解析成功");
     FILE* src_file;
     char srcfile_path[100];
     char run_dir[100];
     sprintf(run_dir, "%s/run%d", WORK_DIR, run_num);
     compile_parameter.file_path = run_dir;
+
     if (receive_language->valueint == LANGUAGE_C) {
         sprintf(srcfile_path, "%s/run%d/main.c", WORK_DIR, run_num);
         src_file = fopen(srcfile_path, "w");
@@ -100,6 +103,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 
     } else {
     }
+
     if (src_file == NULL) {
         // strcpy(err, "redis_client: Cannot open source file");
         // printf("%s\n", err);
@@ -108,12 +112,14 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         *status = 0;
         return NULL;
     }
+
     fprintf(src_file, "%s", receive_src->valuestring);
     fclose(src_file);
     write_log(log_path, "源码写入文件成功");
     compile_result = compile(compile_parameter);
     char testcase_dir[100];
     sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_problem_id->valueint);
+
     if (compile_result.right) {
         // printf("run%d compile right\n", run_num);
         write_log(log_path, "编译正确");
@@ -140,11 +146,13 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         cJSON_AddNumberToObject(retjson, "time", 0);
         cJSON_AddNumberToObject(retjson, "memory", 0);
     }
+
     char compileinfo_path[100];
     sprintf(compileinfo_path, "%s/run%d/%s", WORK_DIR, run_num, compile_result.return_info_name);
     FILE* fp = fopen(compileinfo_path, "r");
     char compileinfo_str[8192];
     char line[1000];
+
     if (fp == NULL) {
         // strcpy(err, "open compile_info.out fail");
         // printf("%s\n", err);
@@ -155,12 +163,14 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         *status = 0;
         return NULL;
     }
+
     while (!feof(fp)) {
         line[0] = 0;
         fgets(line, 1000, fp);
         strcat(compileinfo_str, line);
     }
     fclose(fp);
+
     // printf("run%d  compile_info.out\n************%s\n**************************\n", run_num, compileinfo_str);
     write_log(log_path, compileinfo_str);
     cJSON_AddStringToObject(retjson, "compile", compileinfo_str);
@@ -186,6 +196,7 @@ int main(int argc, char** argv)
     const char* resultjson_str = exec_child(judge_flag, str, &status);
     write_log(log_path, "执行完成 开始连接redis");
     c = redisConnect(redis_ip, atoi(redis_port));
+
     if (c == NULL || c->err) {
         if (c) {
             // printf("run%d  Error: %s\n", judge_flag, c->errstr);
@@ -196,6 +207,7 @@ int main(int argc, char** argv)
         write_log(log_path, "redisConnect error");
         exit(1);
     }
+
     if (status != 1) {
         cJSON_Delete(retjson);
         retjson = cJSON_CreateObject();
@@ -211,6 +223,7 @@ int main(int argc, char** argv)
         }
         resultjson_str = cJSON_PrintUnformatted(retjson);
     }
+
     reply = redisCommand(c, "lpush result_json_str %s", resultjson_str);
     if (reply->type == REDIS_REPLY_ERROR) {
         // strcpy(err, reply->str);
@@ -225,6 +238,7 @@ int main(int argc, char** argv)
         // printf("run%d  type=%d\n", judge_flag, reply->type);
         write_log(log_path, "type error");
     }
+
     cJSON_Delete(json);
     cJSON_Delete(retjson);
     clear_work_dir(judge_flag);
