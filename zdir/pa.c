@@ -1,12 +1,15 @@
 #include <stdio.h>
 int main()
 {
-    // char *p;
-    // p[0]=1;
-    // printf("%c",p[0]);
+    // int p=0;
+    // for(int i=0;i<10000;i++)
+    //     for(int j=0;j<100000;j++)
+    //         p++;
     int a, b;
     scanf("%d", &a);
-	b=a/0;
-    printf("%d\n", b);
+    printf("%d\n", a+100);
+    char *p;
+    p[0]=0;
+    printf("%s",p);
     return 0;
 }

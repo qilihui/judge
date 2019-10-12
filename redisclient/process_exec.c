@@ -223,6 +223,7 @@ int main(int argc, char** argv)
     cJSON_Delete(json);
     cJSON_Delete(retjson);
     freeReplyObject(reply);
+    clear_work_dir(judge_flag);
     redisFree(c);
     return 0;
 }
