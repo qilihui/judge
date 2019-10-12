@@ -60,7 +60,7 @@ int json_decode(const char* str)
 void clear_work_dir(int run_num)
 {
     char a[100];
-    sprintf(a, "/bin/rm %s/run%d/*", WORK_DIR, run_num);
+    sprintf(a, "/bin/rm -rf %s/run%d/*", WORK_DIR, run_num);
     system(a);
 }
 /*
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
     }
     cJSON_Delete(json);
     cJSON_Delete(retjson);
-    // clear_work_dir(judge_flag);
+    clear_work_dir(judge_flag);
     freeReplyObject(reply);
     redisFree(c);
     return 0;

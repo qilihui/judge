@@ -55,6 +55,14 @@ int json_decode(const char* str)
     return 1;
 }
 
+void make_dir()
+{
+    char a[100] = { 0 };
+    for (int i = 0; i < judge_num; i++) {
+        sprintf(a, "mkdir %s/run%d 2>/dev/null", WORK_DIR, i);
+        system(a);
+    }
+}
 int main()
 {
     FILE* conf_fp = fopen("./judge.conf", "r");
@@ -80,6 +88,9 @@ int main()
         case 2:
             strcpy(work_dir_arr, token);
             break;
+        case 3:
+            judge_num = atoi(token);
+            break;
         default:
             break;
         }
@@ -88,26 +99,27 @@ int main()
     WORK_DIR = work_dir_arr;
     redis_ip = redis_ip_arr;
     redis_port = redis_port_arr;
+    make_dir();
     char log_path_arr[100];
     sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
     write_log(log_path, "运行process_manager");
-    write_log(log_path,redis_ip);
-    write_log(log_path,redis_port);
-    write_log(log_path,WORK_DIR);
-    c = redisConnect(redis_ip, atoi(redis_port));
-    if (c == NULL || c->err) {
-        if (c) {
-            // printf("Error: %s\n", c->errstr);
-            write_log(log_path, c->errstr);
-            // handle error
-        } else {
-            // printf("Can't allocate redis context\n");
-            write_log(log_path, "Can't allocate redis context");
-        }
-        exit(1);
-    }
+    write_log(log_path, redis_ip);
+    write_log(log_path, redis_port);
+    write_log(log_path, WORK_DIR);
     while (1) {
+        c = redisConnect(redis_ip, atoi(redis_port));
+        if (c == NULL || c->err) {
+            if (c) {
+                // printf("Error: %s\n", c->errstr);
+                write_log(log_path, c->errstr);
+                // handle error
+            } else {
+                // printf("Can't allocate redis context\n");
+                write_log(log_path, "Can't allocate redis context");
+            }
+            exit(1);
+        }
         // printf("开始执行\n");
         write_log(log_path, "开始执行while循环");
         pid_t end_process = 0;
@@ -169,9 +181,9 @@ int main()
             if (pid == 0) {
                 char judge_flag_str[3];
                 sprintf(judge_flag_str, "%d", judge_flag);
-                sprintf(err, "子进程执行   ./process_exec %s %s %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR,redis_ip,redis_port);
+                sprintf(err, "子进程执行   ./process_exec %s %s %s %s %s", judge_flag_str, reply->element[1]->str, WORK_DIR, redis_ip, redis_port);
                 write_log(log_path, err);
-                int res = execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR,redis_ip,redis_port, NULL);
+                int res = execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, WORK_DIR, redis_ip, redis_port, NULL);
                 if (res == -1)
                     write_log(log_path, "执行execlp错误");
             } else if (pid > 0) {
@@ -187,6 +199,6 @@ int main()
             freeReplyObject(reply);
             continue;
         }
+        redisFree(c);
     }
-    redisFree(c);
 }

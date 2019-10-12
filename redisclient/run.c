@@ -30,12 +30,29 @@ int compare_out(FILE* f1, FILE* f2)
         return __RESULT_SYSTEM_ERROR__;
     }
 }
+
+/*
+ *复制动态库文件到当前目录
+ */
+void cp_lib()
+{
+    system("mkdir -p ./usr/lib/x86_64-linux-gnu");
+    system("mkdir -p ./lib/x86_64-linux-gnu");
+    system("mkdir -p ./lib64");
+    system("cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./usr/lib/x86_64-linux-gnu/");
+    system("cp /lib/x86_64-linux-gnu/libm.so.6 ./lib/x86_64-linux-gnu/");
+    system("cp /lib/x86_64-linux-gnu/libgcc_s.so.1 ./lib/x86_64-linux-gnu/");
+    system("cp /lib/x86_64-linux-gnu/libc.so.6 ./lib/x86_64-linux-gnu/");
+    system("cp /lib64/ld-linux-x86-64.so.2 ./lib64/");
+    system("chmod 777 -R ./*");
+}
 struct run_result run(struct run_parameter parameter)
 {
     struct run_result result;
     //跳转到工作目录
     chdir((const char*)parameter.file_path);
-    write_log(parameter.log_path, "进入run函数");
+    cp_lib();
+    write_log(parameter.log_path, "复制动态库完成 进入run函数");
     result.memory = 0;
     result.result = 0;
     result.time = 0;
@@ -43,9 +60,7 @@ struct run_result run(struct run_parameter parameter)
     const char* case_path = parameter.case_path;
     for (int i = 1; 1; i++) {
         char input_name[50];
-        char file_name[50];
         sprintf(input_name, "%s/%d.in", case_path, i);
-        sprintf(file_name, "%s/%s", parameter.file_path, parameter.file_name);
         if (access((const char*)input_name, F_OK) == -1)
             break;
         pid_t pid = fork();
@@ -74,23 +89,24 @@ struct run_result run(struct run_parameter parameter)
             }
             char x[100];
             getcwd(x, sizeof(x));
-            write_log(parameter.log_path,x);
-            write_log(parameter.log_path,"写入文件目录");
-            printf("chroot 之前\n");
-            if(chroot(parameter.file_path)){
-                write_log(parameter.log_path,strerror(errno));
+            write_log(parameter.log_path, x);
+            write_log(parameter.log_path, "执行chroot");
+            if (chroot(parameter.file_path)) {
+                printf("%s\n", strerror(errno));
+                write_log(parameter.log_path, strerror(errno));
                 exit(3);
             }
-            printf("chroot 之后\n");
-            getcwd(x, sizeof(x));
-            write_log(parameter.log_path,x);
-            write_log(parameter.log_path,"写入文件目录");
-            write_log(parameter.log_path,"chroot完成");
-            if (execl((const char*)file_name, (const char*)parameter.file_name, NULL) == -1) {
-                printf("%s", strerror(errno));
-                char a[100];
-                sprintf(a, "%s", strerror(errno));
-                write_log(parameter.log_path, a);
+            // printf("chroot 之后\n");
+            // getcwd(x, sizeof(x));
+            // write_log(parameter.log_path,x);
+            // write_log(parameter.log_path,"写入文件目录");
+            // write_log(parameter.log_path,"chroot完成");
+            // printf("%s\n",x);
+            if (execl(parameter.file_name, parameter.file_name, NULL) == -1) {
+                printf("%s\n", strerror(errno));
+                // char a[100];
+                // sprintf(a, "%s", strerror(errno));
+                // write_log(parameter.log_path, a);
                 exit(3);
             }
             exit(0);
