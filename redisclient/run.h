@@ -25,6 +25,8 @@ struct run_result
     int time;
     int memory;
     int result;
+    int exit_sig;
+    int exit_code;
 };
 
 //运行执行文件

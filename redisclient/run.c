@@ -47,16 +47,22 @@ void cp_lib()
     system("chmod 777 -R ./*");
 }
 
+void init_result(struct run_result *result)
+{
+    result->result = __RESULT_ACCEPT__;
+    result->time = 0;
+    result->memory = 0;
+    result->exit_sig = 0;
+    result->exit_code = 0;
+}
 struct run_result run(struct run_parameter parameter)
 {
     struct run_result result;
+    init_result(&result);
     //跳转到工作目录
     chdir((const char*)parameter.file_path);
     cp_lib();
     write_log(parameter.log_path, "复制动态库完成 进入run函数");
-    result.memory = 0;
-    result.result = 0;
-    result.time = 0;
     const char* user_out = "user.out";
     const char* case_path = parameter.case_path;
 
@@ -65,8 +71,8 @@ struct run_result run(struct run_parameter parameter)
         sprintf(input_name, "%s/%d.in", case_path, i);
         if (access((const char*)input_name, F_OK) == -1)
             break;
-        pid_t pid = fork();
 
+        pid_t pid = fork();
         if (pid == 0) {
             write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
@@ -78,18 +84,22 @@ struct run_result run(struct run_parameter parameter)
             setrlimit(RLIMIT_FSIZE, &lim);
             lim.rlim_cur = lim.rlim_max = 1;
             setrlimit(RLIMIT_NPROC, &lim);
+
             if (freopen((const char*)input_name, "r", stdin) == NULL) {
                 write_log(parameter.log_path, "进入run函数 子进程 打开stdin出错");
                 exit(3);
             }
+
             if (freopen(user_out, "w", stdout) == NULL) {
                 write_log(parameter.log_path, "进入run函数 子进程 打开stdout出错");
                 exit(3);
             }
+
             if (freopen("err.out", "w", stderr) == NULL) {
                 write_log(parameter.log_path, "进入run函数 子进程 打开stderr出错");
                 exit(3);
             }
+
             char x[100];
             getcwd(x, sizeof(x));
             write_log(parameter.log_path, x);
@@ -99,26 +109,37 @@ struct run_result run(struct run_parameter parameter)
                 write_log(parameter.log_path, strerror(errno));
                 exit(3);
             }
-            // printf("chroot 之后\n");
-            // getcwd(x, sizeof(x));
-            // write_log(parameter.log_path,x);
-            // write_log(parameter.log_path,"写入文件目录");
-            // write_log(parameter.log_path,"chroot完成");
-            // printf("%s\n",x);
             if (execl(parameter.file_name, parameter.file_name, NULL) == -1) {
-                printf("%s\n", strerror(errno));
-                // char a[100];
-                // sprintf(a, "%s", strerror(errno));
-                // write_log(parameter.log_path, a);
                 exit(3);
             }
             exit(0);
-            // system("pwd");
-            // system("./main");
+
         } else {
             struct rusage rusage;
             int status;
             wait4(pid, &status, __WALL, &rusage);
+
+            //收到信号退出 代表运行错误
+            if (WIFSIGNALED(status)) {
+                result.result = __RESULT_RUNNING_ERROR__;
+                result.exit_sig = WTERMSIG(status);
+                result.memory = 0;
+                result.time = 0;
+                return result;
+            }
+
+            //子进程执行exit
+            if (WIFEXITED(status)) {
+                //异常退出  exit(!0)
+                if (WEXITSTATUS(status)) {
+                    result.result = __RESULT_SYSTEM_ERROR__;
+                    result.memory = 0;
+                    result.time = 0;
+                    return result;
+                }
+            }
+
+            //正常return退出 和 exit(0)退出
             //总时间=用户态时间+内核态时间
             int tempvar_time = 0;
             tempvar_time = rusage.ru_utime.tv_sec * 1000 + rusage.ru_utime.tv_usec / 1000;
@@ -126,36 +147,31 @@ struct run_result run(struct run_parameter parameter)
             if (result.time < tempvar_time) {
                 result.time = tempvar_time;
             }
+
             if (result.memory < rusage.ru_maxrss) {
                 result.memory = rusage.ru_maxrss;
             }
-            if (status >> 8 == 3) {
-                result.result = __RESULT_SYSTEM_ERROR__;
-                result.memory = 0;
-                result.time = 0;
-                return result;
-            }
+
             char log_arr[20];
             sprintf(log_arr, "执行status=%d", status >> 8);
             write_log(parameter.log_path, log_arr);
             char problem_out[50];
             sprintf(problem_out, "%s/%d.out", case_path, i);
+
+            //打开测试用例输出和用户输出比较
             FILE* f1 = fopen((const char*)problem_out, "r");
             FILE* f2 = fopen(user_out, "r");
             result.result = compare_out(f1, f2);
             write_log(parameter.log_path, "进入run函数 文件比较结束");
             fclose(f1);
             fclose(f2);
-            // printf("%d\n",rusage.ru_utime.tv_sec);
-            // printf("%d\n",rusage.ru_utime.tv_usec);
-            // printf("%d\n",rusage.ru_stime.tv_sec);
-            // printf("%d\n",rusage.ru_stime.tv_usec);
+
             if (result.result != __RESULT_ACCEPT__) {
                 break;
             }
         }
     }
-    
+
     result.memory /= 1024;
     if (result.time > parameter.time) {
         result.result = __RESULT_TIME_LIMIT_EXCEEDED__;

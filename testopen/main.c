@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <wait.h>
 int main()
 {
     printf("out 1\n");
@@ -32,17 +33,25 @@ int main()
         char x[100];
         getcwd(x, sizeof(x));
         printf("%s\n", x);
-        if(chdir("/home")){
-            printf("chdir 失败 %s\n",strerror(errno));
+        if (chdir("/home")) {
+            printf("chdir 失败 %s\n", strerror(errno));
         }
         getcwd(x, sizeof(x));
         printf("%s\n", x);
-        if (execl("main", "main", NULL) == -1) {
+        exit(0);
+        if (execl("pa", "pa", NULL) == -1) {
             printf("execl error %s", strerror(errno));
         }
         printf("end\n");
+    } else {
+        printf("%d\n", pid);
+        int status;
+        waitpid(pid,&status,__WALL);
+        printf("status = %d\n",status);
+        printf("%d\n",WIFEXITED(status));
+        printf("%d\n",WEXITSTATUS(status));
+
+        printf("%d\n",WIFSIGNALED(status));
+        printf("%d\n",WTERMSIG(status));
     }
-    //  else {
-    //     printf("%d\n", pid);
-    // }
 }
