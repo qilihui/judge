@@ -89,7 +89,7 @@ void create_daemon()
     } else if (pid) {
         exit(0);
     }
-    chdir("/");
+    chdir("/judge_main");
     int i;
     for (i = 0; i < 3; ++i) {
         close(i);
@@ -100,8 +100,8 @@ void create_daemon()
 
 int main()
 {
-    create_daemon();
-    FILE* conf_fp = fopen("/judge.conf", "r");
+    // create_daemon();
+    FILE* conf_fp = fopen("/home/tom/work/redisclient/judge.conf", "r");
     char conf_arr[100];
     char work_dir_arr[100];
     char redis_ip_arr[20];
@@ -157,6 +157,9 @@ int main()
                 } else {
                     write_log(log_path, "Can't allocate redis context");
                 }
+                redisFree(c);
+                c = NULL;
+                sleep(3);
                 continue;
             }
         }
@@ -174,6 +177,14 @@ int main()
         }
 
         reply = redisCommand(c, "brpop source_json_str 100");
+
+        //连接断开了
+        if(reply == NULL ){
+            redisFree(c);
+            c = NULL;
+            continue;
+        }
+
         if (reply->type == REDIS_REPLY_NIL) {
             write_log(log_path, "Waiting for timeout");
         } else if (reply->type == REDIS_REPLY_ERROR) {
@@ -189,7 +200,8 @@ int main()
 
             if (num < 2 || i != num) {
                 write_log(log_path, "redisclient: brpop value < 2 || num!=STRING");
-                freeReplyObject(reply);
+                if(reply != NULL)
+                    freeReplyObject(reply);
                 continue;
             }
 
@@ -231,6 +243,7 @@ int main()
 
         if (reply != NULL) {
             freeReplyObject(reply);
+            reply = NULL;
         }
     }
 }

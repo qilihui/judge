@@ -189,10 +189,19 @@ int main(int argc, char** argv)
     const char* resultjson_str = exec_child(judge_flag, str, &status);
     write_log(log_path, "执行完成 开始连接redis");
 
-    c = redisConnect(redis_ip, atoi(redis_port));
-    if (c == NULL || c->err) {
-        write_log(log_path, "redisConnect error");
-        exit(1);
+    for (int i = 0; i < 3; i++) {
+        c = redisConnect(redis_ip, atoi(redis_port));
+        if (c == NULL) {
+            write_log(log_path, "redisConnect == NULL");
+            continue;
+        }
+        if(c->err){
+            write_log(log_path, c->errstr);
+            redisFree(c);
+            c = NULL;
+            continue;
+        }
+        break;
     }
 
     if (status != 1) {
@@ -212,6 +221,11 @@ int main(int argc, char** argv)
     }
 
     reply = redisCommand(c, "lpush result_json_str %s", resultjson_str);
+
+    if(reply == NULL) {
+        exit(0);
+    }
+
     if (reply->type == REDIS_REPLY_ERROR) {
         write_log(log_path, reply->str);
     } else if (reply->type == REDIS_REPLY_INTEGER) {
