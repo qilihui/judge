@@ -47,7 +47,7 @@ void cp_lib()
     system("chmod 777 -R ./*");
 }
 
-void init_result(struct run_result *result)
+void init_result(struct run_result* result)
 {
     result->result = __RESULT_ACCEPT__;
     result->time = 0;
@@ -119,27 +119,6 @@ struct run_result run(struct run_parameter parameter)
             int status;
             wait4(pid, &status, __WALL, &rusage);
 
-            //收到信号退出 代表运行错误
-            if (WIFSIGNALED(status)) {
-                result.result = __RESULT_RUNNING_ERROR__;
-                result.exit_sig = WTERMSIG(status);
-                result.memory = 0;
-                result.time = 0;
-                return result;
-            }
-
-            //子进程执行exit
-            if (WIFEXITED(status)) {
-                //异常退出  exit(!0)
-                if (WEXITSTATUS(status)) {
-                    result.result = __RESULT_SYSTEM_ERROR__;
-                    result.memory = 0;
-                    result.time = 0;
-                    return result;
-                }
-            }
-
-            //正常return退出 和 exit(0)退出
             //总时间=用户态时间+内核态时间
             int tempvar_time = 0;
             tempvar_time = rusage.ru_utime.tv_sec * 1000 + rusage.ru_utime.tv_usec / 1000;
@@ -151,6 +130,26 @@ struct run_result run(struct run_parameter parameter)
             if (result.memory < rusage.ru_maxrss) {
                 result.memory = rusage.ru_maxrss;
             }
+
+            //收到信号退出 代表运行错误
+            if (WIFSIGNALED(status)) {
+                result.result = __RESULT_RUNNING_ERROR__;
+                result.exit_sig = WTERMSIG(status);
+                result.memory /= 1024;
+                return result;
+            }
+
+            //子进程执行exit
+            if (WIFEXITED(status)) {
+                //异常退出  exit(!0)
+                if (WEXITSTATUS(status)) {
+                    result.result = __RESULT_SYSTEM_ERROR__;
+                    result.memory /= 1024;
+                    return result;
+                }
+            }
+
+            //其他情况为正常return退出 和 exit(0)退出
 
             char log_arr[20];
             sprintf(log_arr, "执行status=%d", status >> 8);
