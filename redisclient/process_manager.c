@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 cJSON* json;
 cJSON* retjson;
@@ -65,9 +67,41 @@ void make_dir()
     }
 }
 
+//守护进程
+void create_daemon()
+{
+    pid_t pid;
+    pid = fork();
+    if (pid == -1) {
+        printf("fork error\n");
+        exit(1);
+    } else if (pid) {
+        exit(0);
+    }
+    if (-1 == setsid()) {
+        printf("setsid error\n");
+        exit(1);
+    }
+    pid = fork();
+    if (pid == -1) {
+        printf("fork error\n");
+        exit(1);
+    } else if (pid) {
+        exit(0);
+    }
+    chdir("/");
+    int i;
+    for (i = 0; i < 3; ++i) {
+        close(i);
+    }
+    umask(0);
+    return;
+}
+
 int main()
 {
-    FILE* conf_fp = fopen("./judge.conf", "r");
+    create_daemon();
+    FILE* conf_fp = fopen("/judge.conf", "r");
     char conf_arr[100];
     char work_dir_arr[100];
     char redis_ip_arr[20];
