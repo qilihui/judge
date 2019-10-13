@@ -24,9 +24,15 @@ cJSON* receive_problem_id;
 redisContext* c;
 redisReply* reply;
 char err[200];
+char work_dir_arr[100];
+char redis_ip_arr[20];
+char redis_port_arr[10];
+char redis_passwd_arr[30];
 const char* WORK_DIR = "/judge_path";
 const char* log_path;
-
+const char* redis_ip;
+const char* redis_port;
+const char* redis_passwd;
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -171,13 +177,52 @@ const char* exec_child(int judge_flag, const char* str, int* status)
     return cJSON_PrintUnformatted(retjson);
 }
 
+/*
+ *加载配置文件 位置是 /judge.conf
+ */
+void load_conf()
+{
+    FILE* conf_fp = fopen("/judge.conf", "r");
+    char conf_arr[100];
+
+    if (conf_fp == NULL) {
+        exit(1);
+    }
+
+    char* token;
+    for (int i = 0; !feof(conf_fp); i++) {
+        conf_arr[0] = 0;
+        fgets(conf_arr, 99, conf_fp);
+        strtok(conf_arr, "\"");
+        token = strtok(NULL, "\"");
+        switch (i) {
+        case 0:
+            strcpy(redis_ip_arr, token);
+            break;
+        case 1:
+            strcpy(redis_port_arr, token);
+            break;
+        case 2:
+            strcpy(redis_passwd_arr, token);
+            break;
+        case 3:
+            strcpy(work_dir_arr, token);
+            break;
+        default:
+            break;
+        }
+    }
+    fclose(conf_fp);
+    WORK_DIR = work_dir_arr;
+    redis_ip = redis_ip_arr;
+    redis_port = redis_port_arr;
+    redis_passwd = redis_passwd_arr;
+}
 int main(int argc, char** argv)
 {
     int judge_flag = atoi(argv[1]);
     const char* str = argv[2];
-    WORK_DIR = argv[3];
-    const char* redis_ip = argv[4];
-    const char* redis_port = argv[5];
+    load_conf();
     chdir(WORK_DIR);
     char log_path_arr[100];
     sprintf(log_path_arr, "%s/log/run%s.log", WORK_DIR, argv[1]);
@@ -195,13 +240,27 @@ int main(int argc, char** argv)
             write_log(log_path, "redisConnect == NULL");
             continue;
         }
-        if(c->err){
+        if (c->err) {
             write_log(log_path, c->errstr);
             redisFree(c);
             c = NULL;
             continue;
         }
-        break;
+    }
+
+    //认证
+    reply = redisCommand(c, "AUTH %s", redis_passwd);
+    if (reply == NULL) {
+        write_log(log_path, "redis 认证失败-reply为空");
+        redisFree(c);
+        c = NULL;
+        exit(0);
+    }
+    if (reply->type == REDIS_REPLY_ERROR) {
+        write_log(log_path, reply->str);
+        exit(0);
+    } else {
+        write_log(log_path, "redis 认证成功");
     }
 
     if (status != 1) {
@@ -222,7 +281,7 @@ int main(int argc, char** argv)
 
     reply = redisCommand(c, "lpush result_json_str %s", resultjson_str);
 
-    if(reply == NULL) {
+    if (reply == NULL) {
         exit(0);
     }
 
