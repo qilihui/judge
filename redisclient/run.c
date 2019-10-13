@@ -133,10 +133,12 @@ struct run_result run(struct run_parameter parameter)
 
             //收到信号退出 代表运行错误
             if (WIFSIGNALED(status)) {
-                result.result = __RESULT_RUNNING_ERROR__;
                 result.exit_sig = WTERMSIG(status);
-                result.memory /= 1024;
-                return result;
+                result.result = __RESULT_RUNNING_ERROR__;
+                if (WTERMSIG(status) == SIGSEGV) {
+                    result.result = __RESULT_MEMORY_LIMIT_EXCEEDED__;
+                }
+                break;
             }
 
             //子进程执行exit
@@ -144,8 +146,7 @@ struct run_result run(struct run_parameter parameter)
                 //异常退出  exit(!0)
                 if (WEXITSTATUS(status)) {
                     result.result = __RESULT_SYSTEM_ERROR__;
-                    result.memory /= 1024;
-                    return result;
+                    break;
                 }
             }
 
