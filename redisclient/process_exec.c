@@ -246,6 +246,7 @@ int main(int argc, char** argv)
             c = NULL;
             continue;
         }
+        break;
     }
 
     //认证
