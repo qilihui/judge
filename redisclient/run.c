@@ -145,6 +145,7 @@ struct run_result run(struct run_parameter parameter)
             if (WIFEXITED(status)) {
                 //异常退出  exit(!0)
                 if (WEXITSTATUS(status)) {
+                    result.exit_code = WEXITSTATUS(status);
                     result.result = __RESULT_SYSTEM_ERROR__;
                     break;
                 }
