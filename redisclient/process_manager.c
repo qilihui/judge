@@ -150,7 +150,7 @@ void load_conf()
 
 int main()
 {
-    // create_daemon();
+    create_daemon();
     load_conf();
     make_dir();
     char log_path_arr[100];
