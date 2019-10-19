@@ -19,8 +19,8 @@ cJSON* receive_src;
 cJSON* receive_language;
 cJSON* receive_time;
 cJSON* receive_memory;
-cJSON* receive_id;
-cJSON* receive_problem_id;
+cJSON* receive_submit_id;
+cJSON* receive_test_case_id;
 redisContext* c;
 redisReply* reply;
 char err[200];
@@ -48,13 +48,13 @@ int json_decode(const char* str)
     receive_language = cJSON_GetObjectItem(json, "language");
     receive_time = cJSON_GetObjectItem(json, "time");
     receive_memory = cJSON_GetObjectItem(json, "memory");
-    receive_id = cJSON_GetObjectItem(json, "id");
-    receive_problem_id = cJSON_GetObjectItem(json, "problem_id");
-    if (!receive_src || !receive_language || !receive_memory || !receive_time || !receive_problem_id) {
+    receive_submit_id = cJSON_GetObjectItem(json, "submit_id");
+    receive_test_case_id = cJSON_GetObjectItem(json, "test_case_id");
+    if (!receive_src || !receive_language || !receive_memory || !receive_time || !receive_test_case_id || !receive_submit_id) {
         write_log(log_path, "(str) JSON key error");
         return 0;
     }
-    if (receive_src->type != cJSON_String || receive_language->type != cJSON_Number || receive_time->type != cJSON_Number || receive_memory->type != cJSON_Number || receive_id->type != cJSON_Number || receive_problem_id->type != cJSON_Number) {
+    if (receive_src->type != cJSON_String || receive_language->type != cJSON_Number || receive_time->type != cJSON_Number || receive_memory->type != cJSON_Number || receive_submit_id->type != cJSON_Number || receive_test_case_id->type != cJSON_Number) {
         write_log(log_path, "(str) JSON value error");
         return 0;
     }
@@ -79,7 +79,6 @@ const char* exec_child(int judge_flag, const char* str, int* status)
     int run_num = judge_flag;
 
     if (!json_decode(str)) {
-        cJSON_Delete(json);
         *status = -1;
         return NULL;
     }
@@ -108,7 +107,10 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 
     if (src_file == NULL) {
         write_log(log_path, "redis_client: Cannot open source file");
-        cJSON_Delete(json);
+        if (json) {
+            cJSON_Delete(json);
+            json = NULL;
+        }
         *status = 0;
         return NULL;
     }
@@ -118,7 +120,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
     write_log(log_path, "源码写入文件成功");
     compile_result = compile(compile_parameter);
     char testcase_dir[100];
-    sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_problem_id->valueint);
+    sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_test_case_id->valueint);
 
     if (compile_result.right) {
         write_log(log_path, "编译正确");
@@ -130,7 +132,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         run_parameter.memory = receive_memory->valueint;
         run_result = run(run_parameter);
         retjson = cJSON_CreateObject();
-        cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
+        cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
         cJSON_AddNumberToObject(retjson, "result", run_result.result);
         cJSON_AddNumberToObject(retjson, "time", run_result.time);
         cJSON_AddNumberToObject(retjson, "memory", run_result.memory);
@@ -141,7 +143,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
     } else {
         write_log(log_path, "编译错误");
         retjson = cJSON_CreateObject();
-        cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
+        cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
         cJSON_AddNumberToObject(retjson, "result", 0);
         cJSON_AddNumberToObject(retjson, "time", 0);
         cJSON_AddNumberToObject(retjson, "memory", 0);
@@ -157,8 +159,14 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 
     if (fp == NULL) {
         write_log(log_path, "open compile_info.out fail");
-        cJSON_Delete(json);
-        cJSON_Delete(retjson);
+        if (json) {
+            cJSON_Delete(json);
+            json = NULL;
+        }
+        if (retjson) {
+            cJSON_Delete(retjson);
+            retjson = NULL;
+        }
         clear_work_dir(run_num);
         *status = 0;
         return NULL;
@@ -271,10 +279,10 @@ int main(int argc, char** argv)
         cJSON_AddNumberToObject(retjson, "memory", 0);
         cJSON_AddStringToObject(retjson, "compile", "");
         if (status == 0) {
-            cJSON_AddNumberToObject(retjson, "id", receive_id->valueint);
+            cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
             cJSON_AddNumberToObject(retjson, "result", -1);
         } else {
-            cJSON_AddNumberToObject(retjson, "id", -1);
+            cJSON_AddNumberToObject(retjson, "submit_id", -1);
             cJSON_AddNumberToObject(retjson, "result", -1);
         }
         resultjson_str = cJSON_PrintUnformatted(retjson);
@@ -294,10 +302,19 @@ int main(int argc, char** argv)
         write_log(log_path, "type error");
     }
 
-    cJSON_Delete(json);
-    cJSON_Delete(retjson);
+    if (json) {
+        cJSON_Delete(json);
+        json = NULL;
+    }
+    if (retjson) {
+        cJSON_Delete(retjson);
+        retjson = NULL;
+    }
     freeReplyObject(reply);
     clear_work_dir(judge_flag);
-    redisFree(c);
+    if (c) {
+        redisFree(c);
+        c = NULL;
+    }
     return 0;
 }
