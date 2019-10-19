@@ -14,6 +14,7 @@ struct run_parameter
     const char *file_path;    //工作目录 应包含可执行二进制文件
     const char *case_path;    //测试用例的输入输出文件路径
     const char *file_name;    //可执行文件名
+    int case_id;    //测试用例id
     int language;   //语言类型  1c     2cpp    3java
     int memory;     //内存限制 兆字节
     int time;       //时间限制 毫秒

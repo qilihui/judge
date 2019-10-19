@@ -3,13 +3,25 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <mysql/mysql.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+const char* user_ip = "";
+const char* user_port = "";
+const char* user_user = "";
+const char* user_passwd = "";
+const char* user_dbname = "";
+char mysql_ip_arr[20];
+char mysql_port_arr[10];
+char mysql_user_arr[20];
+char mysql_passwd_arr[20];
+char mysql_dbname_arr[20];
 
 int compare_out(FILE* f1, FILE* f2)
 {
@@ -55,6 +67,110 @@ void init_result(struct run_result* result)
     result->exit_sig = 0;
     result->exit_code = 0;
 }
+
+/*
+ *加载配置文件 位置是 /judge.conf
+ */
+void load_run_conf()
+{
+    FILE* conf_fp = fopen("/judge.conf", "r");
+    char conf_arr[100];
+
+    if (conf_fp == NULL) {
+        exit(1);
+    }
+
+    char* token;
+    for (int i = 0; !feof(conf_fp); i++) {
+        conf_arr[0] = 0;
+        fgets(conf_arr, 99, conf_fp);
+        strtok(conf_arr, "\"");
+        token = strtok(NULL, "\"");
+        switch (i) {
+        case 5:
+            strcpy(mysql_ip_arr, token);
+            break;
+        case 6:
+            strcpy(mysql_port_arr, token);
+            break;
+        case 7:
+            strcpy(mysql_user_arr, token);
+            break;
+        case 8:
+            strcpy(mysql_passwd_arr, token);
+            break;
+        case 9:
+            strcpy(mysql_dbname_arr, token);
+            break;
+        default:
+            break;
+        }
+    }
+    fclose(conf_fp);
+    user_ip = mysql_ip_arr;
+    user_port = mysql_port_arr;
+    user_user = mysql_user_arr;
+    user_passwd = mysql_passwd_arr;
+    user_dbname = mysql_dbname_arr;
+}
+
+int load_case(struct run_parameter parameter)
+{
+    write_log(parameter.log_path, "从mysql获取测试用例");
+    int n = mkdir(parameter.case_path, 00775);
+    if (n) {
+        // printf("%s\n", strerror(errno));
+        write_log(parameter.log_path,strerror(errno));
+    }
+    load_run_conf();
+    MYSQL* conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, user_ip, user_user, user_passwd, user_dbname, atoi(user_port), 0, 0)) {
+        write_log(parameter.log_path, "mysql连接失败");
+        conn = NULL;
+        return -1;
+    }
+    char sql[100];
+    sprintf(sql, "select in_case,out_case from test_case where test_case_id=%d", parameter.case_id);
+    if (mysql_real_query(conn, sql, strlen(sql))) {
+        write_log(parameter.log_path, "执行sql语句失败");
+        mysql_close(conn);
+        return -1;
+    }
+    MYSQL_RES* res = mysql_store_result(conn);
+    MYSQL_ROW row;
+    int i = 0;
+    char file_path_arr[100];
+    FILE* fp;
+    while (res != NULL && (row = mysql_fetch_row(res)) != NULL) {
+        ++i;
+        // printf("*****in*****\n%s\n*****out*****\n%s\n\n", row[0], row[1]);
+        sprintf(file_path_arr, "%s/%d.in", parameter.case_path, i);
+        fp = fopen(file_path_arr, "w");
+        if (fp == NULL) {
+            write_log(parameter.log_path, "打开文件写入测试用例 打开文件失败");
+            return -1;
+        }
+        fprintf(fp, "%s", row[0]);
+        fclose(fp);
+        sprintf(file_path_arr, "%s/%d.out", parameter.case_path, i);
+        fp = fopen(file_path_arr, "w");
+        if (fp == NULL) {
+            write_log(parameter.log_path, "打开文件写入测试用例 打开文件失败");
+            return -1;
+        }
+        fprintf(fp, "%s", row[1]);
+        fclose(fp);
+    }
+    mysql_close(conn);
+    mysql_free_result(res);
+    conn = NULL;
+    if (i == 0) {
+        write_log(parameter.log_path, "没有在mysql中查找到测试用例");
+        return -1;
+    }
+    return 0;
+}
+
 struct run_result run(struct run_parameter parameter)
 {
     struct run_result result;
@@ -69,8 +185,18 @@ struct run_result run(struct run_parameter parameter)
     for (int i = 1; 1; i++) {
         char input_name[50];
         sprintf(input_name, "%s/%d.in", case_path, i);
-        if (access((const char*)input_name, F_OK) == -1)
-            break;
+        if (access((const char*)input_name, F_OK) == -1) {
+            if (i == 1) {
+                if (load_case(parameter)) {
+                    result.result = __RESULT_SYSTEM_ERROR__;
+                    return result;
+                }
+                write_log(parameter.log_path, "mysql 执行完成");
+                // exit(0);
+            } else {
+                break;
+            }
+        }
 
         pid_t pid = fork();
         if (pid == 0) {

@@ -30,7 +30,7 @@ char work_dir_arr[100];
 char redis_ip_arr[20];
 char redis_port_arr[10];
 char redis_passwd_arr[30];
-const char* log_path;
+const char* log_path = "";
 const char* redis_ip = "127.0.0.1";
 const char* redis_port = "6379";
 const char* redis_passwd = "";

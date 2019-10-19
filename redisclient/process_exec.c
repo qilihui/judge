@@ -29,10 +29,10 @@ char redis_ip_arr[20];
 char redis_port_arr[10];
 char redis_passwd_arr[30];
 const char* WORK_DIR = "/judge_path";
-const char* log_path;
-const char* redis_ip;
-const char* redis_port;
-const char* redis_passwd;
+const char* log_path = "";
+const char* redis_ip = "";
+const char* redis_port = "";
+const char* redis_passwd = "";
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -130,6 +130,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         run_parameter.language = receive_language->valueint;
         run_parameter.time = receive_time->valueint;
         run_parameter.memory = receive_memory->valueint;
+        run_parameter.case_id = receive_test_case_id ->valueint;
         run_result = run(run_parameter);
         retjson = cJSON_CreateObject();
         cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
