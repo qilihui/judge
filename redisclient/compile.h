@@ -10,6 +10,7 @@ struct compile_parameter
     const char *file_path;    //工作目录 所要编译文件位置
     const char *file_name;    //文件名
     int language;   //语言类型  1c     2cpp    3java
+    int debug_mode;
 };
 
 //返回结果

@@ -34,6 +34,7 @@ const char* log_path = "";
 const char* redis_ip = "127.0.0.1";
 const char* redis_port = "6379";
 const char* redis_passwd = "";
+int debug_mode = 0;
 
 /*
  * @str: source json
@@ -137,6 +138,8 @@ void load_conf()
         case 4:
             judge_num = atoi(token);
             break;
+        case 10:
+            debug_mode = atoi(token);
         default:
             break;
         }
@@ -156,10 +159,12 @@ int main()
     char log_path_arr[100];
     sprintf(log_path_arr, "%s/log/manager.log", WORK_DIR);
     log_path = log_path_arr;
-    write_log(log_path, "运行process_manager");
-    write_log(log_path, redis_ip);
-    write_log(log_path, redis_port);
-    write_log(log_path, WORK_DIR);
+    if (debug_mode) {
+        write_log(log_path, "运行process_manager");
+        write_log(log_path, redis_ip);
+        write_log(log_path, redis_port);
+        write_log(log_path, WORK_DIR);
+    }
 
     while (1) {
         if (c == NULL) {
@@ -191,7 +196,8 @@ int main()
             }
         }
 
-        write_log(log_path, "开始执行while循环");
+        if (debug_mode)
+            write_log(log_path, "开始执行while循环");
         pid_t end_process = 0;
 
         while ((end_process = waitpid(-1, NULL, WNOHANG)) > 0) {
@@ -214,7 +220,8 @@ int main()
         }
 
         if (reply->type == REDIS_REPLY_NIL) {
-            write_log(log_path, "Waiting for timeout");
+            if (debug_mode)
+                write_log(log_path, "Waiting for timeout");
         } else if (reply->type == REDIS_REPLY_ERROR) {
             write_log(log_path, reply->str);
         } else if (reply->type == REDIS_REPLY_ARRAY) {
@@ -256,7 +263,8 @@ int main()
                 char judge_flag_str[3];
                 sprintf(judge_flag_str, "%d", judge_flag);
                 sprintf(err, "子进程执行   ./process_exec %s %s", judge_flag_str, reply->element[1]->str);
-                write_log(log_path, err);
+                if (debug_mode)
+                    write_log(log_path, err);
                 int res = execlp("./process_exec", "process_exec", judge_flag_str, reply->element[1]->str, NULL);
                 if (res == -1)
                     write_log(log_path, "执行execlp错误");

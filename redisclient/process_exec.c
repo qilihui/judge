@@ -33,6 +33,8 @@ const char* log_path = "";
 const char* redis_ip = "";
 const char* redis_port = "";
 const char* redis_passwd = "";
+int debug_mode = 0;
+
 /*
  * @str: source json
  * @return: Right returns 1,error returns 0, and Set the value of err.
@@ -130,7 +132,7 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         run_parameter.language = receive_language->valueint;
         run_parameter.time = receive_time->valueint;
         run_parameter.memory = receive_memory->valueint;
-        run_parameter.case_id = receive_test_case_id ->valueint;
+        run_parameter.case_id = receive_test_case_id->valueint;
         run_result = run(run_parameter);
         retjson = cJSON_CreateObject();
         cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
@@ -168,7 +170,8 @@ const char* exec_child(int judge_flag, const char* str, int* status)
             cJSON_Delete(retjson);
             retjson = NULL;
         }
-        clear_work_dir(run_num);
+        if (!debug_mode)
+            clear_work_dir(run_num);
         *status = 0;
         return NULL;
     }
@@ -217,6 +220,9 @@ void load_conf()
         case 3:
             strcpy(work_dir_arr, token);
             break;
+        case 10:
+            debug_mode = atoi(token);
+            break;
         default:
             break;
         }
@@ -237,11 +243,15 @@ int main(int argc, char** argv)
     sprintf(log_path_arr, "%s/log/run%s.log", WORK_DIR, argv[1]);
     log_path = log_path_arr;
     compile_parameter.log_path = log_path;
+    compile_parameter.debug_mode = debug_mode;
     run_parameter.log_path = log_path;
-    write_log(log_path, "运行process_exec");
+    run_parameter.debug_mode = debug_mode;
+    if (debug_mode)
+        write_log(log_path, "运行process_exec");
     int status = 1;
     const char* resultjson_str = exec_child(judge_flag, str, &status);
-    write_log(log_path, "执行完成 开始连接redis");
+    if (debug_mode)
+        write_log(log_path, "执行完成 开始连接redis");
 
     for (int i = 0; i < 3; i++) {
         c = redisConnect(redis_ip, atoi(redis_port));
@@ -270,7 +280,8 @@ int main(int argc, char** argv)
         write_log(log_path, reply->str);
         exit(0);
     } else {
-        write_log(log_path, "redis 认证成功");
+        if (debug_mode)
+            write_log(log_path, "redis 认证成功");
     }
 
     if (status != 1) {
@@ -298,7 +309,8 @@ int main(int argc, char** argv)
     if (reply->type == REDIS_REPLY_ERROR) {
         write_log(log_path, reply->str);
     } else if (reply->type == REDIS_REPLY_INTEGER) {
-        write_log(log_path, "exec success");
+        if (debug_mode)
+            write_log(log_path, "exec success");
     } else {
         write_log(log_path, "type error");
     }
@@ -312,7 +324,8 @@ int main(int argc, char** argv)
         retjson = NULL;
     }
     freeReplyObject(reply);
-    clear_work_dir(judge_flag);
+    if (!debug_mode)
+        clear_work_dir(judge_flag);
     if (c) {
         redisFree(c);
         c = NULL;

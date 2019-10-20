@@ -18,6 +18,7 @@ struct run_parameter
     int language;   //语言类型  1c     2cpp    3java
     int memory;     //内存限制 兆字节
     int time;       //时间限制 毫秒
+    int debug_mode;
 };
 
 //运行结果

@@ -116,11 +116,12 @@ void load_run_conf()
 
 int load_case(struct run_parameter parameter)
 {
-    write_log(parameter.log_path, "从mysql获取测试用例");
+    if (parameter.debug_mode)
+        write_log(parameter.log_path, "从mysql获取测试用例");
     int n = mkdir(parameter.case_path, 00775);
     if (n) {
         // printf("%s\n", strerror(errno));
-        write_log(parameter.log_path,strerror(errno));
+        write_log(parameter.log_path, strerror(errno));
     }
     load_run_conf();
     MYSQL* conn = mysql_init(NULL);
@@ -178,7 +179,8 @@ struct run_result run(struct run_parameter parameter)
     //跳转到工作目录
     chdir((const char*)parameter.file_path);
     cp_lib();
-    write_log(parameter.log_path, "复制动态库完成 进入run函数");
+    if (parameter.debug_mode)
+        write_log(parameter.log_path, "复制动态库完成 进入run函数");
     const char* user_out = "user.out";
     const char* case_path = parameter.case_path;
 
@@ -191,7 +193,8 @@ struct run_result run(struct run_parameter parameter)
                     result.result = __RESULT_SYSTEM_ERROR__;
                     return result;
                 }
-                write_log(parameter.log_path, "mysql 执行完成");
+                if (parameter.debug_mode)
+                    write_log(parameter.log_path, "mysql 执行完成");
                 // exit(0);
             } else {
                 break;
@@ -200,7 +203,8 @@ struct run_result run(struct run_parameter parameter)
 
         pid_t pid = fork();
         if (pid == 0) {
-            write_log(parameter.log_path, "进入run函数 子进程");
+            if (parameter.debug_mode)
+                write_log(parameter.log_path, "进入run函数 子进程");
             struct rlimit lim;
             lim.rlim_cur = lim.rlim_max = parameter.time / 1000 + 1;
             setrlimit(RLIMIT_CPU, &lim);
@@ -228,8 +232,10 @@ struct run_result run(struct run_parameter parameter)
 
             char x[100];
             getcwd(x, sizeof(x));
-            write_log(parameter.log_path, x);
-            write_log(parameter.log_path, "执行chroot");
+            if (parameter.debug_mode)
+                write_log(parameter.log_path, x);
+            if (parameter.debug_mode)
+                write_log(parameter.log_path, "执行chroot");
             if (chroot(parameter.file_path)) {
                 printf("%s\n", strerror(errno));
                 write_log(parameter.log_path, strerror(errno));
@@ -281,7 +287,8 @@ struct run_result run(struct run_parameter parameter)
 
             char log_arr[20];
             sprintf(log_arr, "执行status=%d", status >> 8);
-            write_log(parameter.log_path, log_arr);
+            if (parameter.debug_mode)
+                write_log(parameter.log_path, log_arr);
             char problem_out[50];
             sprintf(problem_out, "%s/%d.out", case_path, i);
 
@@ -289,7 +296,8 @@ struct run_result run(struct run_parameter parameter)
             FILE* f1 = fopen((const char*)problem_out, "r");
             FILE* f2 = fopen(user_out, "r");
             result.result = compare_out(f1, f2);
-            write_log(parameter.log_path, "进入run函数 文件比较结束");
+            if (parameter.debug_mode)
+                write_log(parameter.log_path, "进入run函数 文件比较结束");
             fclose(f1);
             fclose(f2);
 
