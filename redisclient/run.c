@@ -332,9 +332,6 @@ struct run_result run(struct run_parameter parameter)
             if (WIFSIGNALED(status)) {
                 result.exit_sig = WTERMSIG(status);
                 result.result = __RESULT_RUNNING_ERROR__;
-                if (WTERMSIG(status) == SIGSEGV) {
-                    result.result = __RESULT_MEMORY_LIMIT_EXCEEDED__;
-                }
                 break;
             }
 

@@ -84,8 +84,8 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         *status = -1;
         return NULL;
     }
-
-    write_log(log_path, "json解析成功");
+    if (debug_mode)
+        write_log(log_path, "json解析成功");
     FILE* src_file;
     char srcfile_path[100];
     char run_dir[100];
@@ -119,13 +119,15 @@ const char* exec_child(int judge_flag, const char* str, int* status)
 
     fprintf(src_file, "%s", receive_src->valuestring);
     fclose(src_file);
-    write_log(log_path, "源码写入文件成功");
+    if (debug_mode)
+        write_log(log_path, "源码写入文件成功");
     compile_result = compile(compile_parameter);
     char testcase_dir[100];
     sprintf(testcase_dir, "%s/problem/%d", WORK_DIR, receive_test_case_id->valueint);
 
     if (compile_result.right) {
-        write_log(log_path, "编译正确");
+        if (debug_mode)
+            write_log(log_path, "编译正确");
         run_parameter.file_path = run_dir;
         run_parameter.file_name = compile_result.return_name;
         run_parameter.case_path = testcase_dir;
@@ -141,8 +143,10 @@ const char* exec_child(int judge_flag, const char* str, int* status)
         cJSON_AddNumberToObject(retjson, "memory", run_result.memory);
         cJSON_AddNumberToObject(retjson, "exit_sig", run_result.exit_sig);
         cJSON_AddNumberToObject(retjson, "exit_code", run_result.exit_code);
-        sprintf(err, "run%d time=%d memory=%d result=%d exit_sig=%d exit_code=%d", run_num, run_result.time, run_result.memory, run_result.result, run_result.exit_sig, run_result.exit_code);
-        write_log(log_path, err);
+        if (debug_mode) {
+            sprintf(err, "run%d time=%d memory=%d result=%d exit_sig=%d exit_code=%d", run_num, run_result.time, run_result.memory, run_result.result, run_result.exit_sig, run_result.exit_code);
+            write_log(log_path, err);
+        }
     } else {
         write_log(log_path, "编译错误");
         retjson = cJSON_CreateObject();
@@ -183,7 +187,8 @@ const char* exec_child(int judge_flag, const char* str, int* status)
     }
     fclose(fp);
 
-    write_log(log_path, compileinfo_str);
+    if (debug_mode)
+        write_log(log_path, compileinfo_str);
     cJSON_AddStringToObject(retjson, "compile", compileinfo_str);
     *status = 1;
     return cJSON_PrintUnformatted(retjson);
