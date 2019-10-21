@@ -192,7 +192,8 @@ int main()
                 write_log(log_path, reply->str);
                 exit(0);
             } else {
-                write_log(log_path, "redis 认证成功");
+                if (debug_mode)
+                    write_log(log_path, "redis 认证成功");
             }
         }
 
