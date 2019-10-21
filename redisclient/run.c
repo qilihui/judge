@@ -28,16 +28,29 @@ int compare_out(FILE* f1, FILE* f2)
     if (f1 != NULL && f2 != NULL) {
         int c1 = 0, c2 = 0;
         do {
-            c1 = fgetc(f1);
-            c2 = fgetc(f2);
             if (c1 != c2) {
                 return __RESULT_WRONG_ANSWER__;
             }
+            c1 = fgetc(f1);
+            c2 = fgetc(f2);
         } while (c1 != EOF && c2 != EOF);
-        if (c1 != EOF || c2 != EOF) {
+
+        if (c1 != EOF && c2 == EOF) {
             return __RESULT_WRONG_ANSWER__;
+        } else if (c1 != EOF && c2 != EOF) {
+            return __RESULT_WRONG_ANSWER__;
+        } else if (c1 == EOF && c2 != EOF) {
+            do {
+                if (c2 != ' ' && c2 != '\n') {
+                    return __RESULT_WRONG_ANSWER__;
+                }
+                c2 = fgetc(f2);
+            } while (c2 != EOF);
+            return __RESULT_ACCEPT__;
+        } else {
+            return __RESULT_ACCEPT__;
         }
-        return __RESULT_ACCEPT__;
+
     } else {
         return __RESULT_SYSTEM_ERROR__;
     }
@@ -135,6 +148,24 @@ char* strrpc(char* str, char* oldstr, char* newstr)
     return str;
 }
 
+/*
+ * 去除字符串结尾空格 换行
+ */
+char* strrtrim(char* str)
+{
+    if (str == NULL || *str == '\0') {
+        return str;
+    }
+    int len = strlen(str);
+    char* p = str + len - 1;
+    while (p >= str && (*p == ' ' || *p == '\n')) {
+        *p = '\0';
+        --p;
+    }
+
+    return str;
+}
+
 int load_case(struct run_parameter parameter)
 {
     if (parameter.debug_mode)
@@ -176,6 +207,7 @@ int load_case(struct run_parameter parameter)
         memset(hin, 0, sizeof(hin));
         strcpy(hin, row[0]);
         strrpc(hin, "\r\n", "\n");
+        strrtrim(hin);
         fprintf(fp, "%s", hin);
         fclose(fp);
         free(hin);
@@ -190,6 +222,7 @@ int load_case(struct run_parameter parameter)
         memset(hout, 0, sizeof(hout));
         strcpy(hout, row[1]);
         strrpc(hout, "\r\n", "\n");
+        strrtrim(hout);
         fprintf(fp, "%s", hout);
         fclose(fp);
         free(hout);
