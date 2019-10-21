@@ -114,6 +114,27 @@ void load_run_conf()
     user_dbname = mysql_dbname_arr;
 }
 
+/*
+ * 字符串替换
+ */
+char* strrpc(char* str, char* oldstr, char* newstr)
+{
+    char bstr[strlen(str)]; //转换缓冲区
+    memset(bstr, 0, sizeof(bstr));
+
+    for (int i = 0; i < strlen(str); i++) {
+        if (!strncmp(str + i, oldstr, strlen(oldstr))) { //查找目标字符串
+            strcat(bstr, newstr);
+            i += strlen(oldstr) - 1;
+        } else {
+            strncat(bstr, str + i, 1); //保存一字节进缓冲区
+        }
+    }
+
+    strcpy(str, bstr);
+    return str;
+}
+
 int load_case(struct run_parameter parameter)
 {
     if (parameter.debug_mode)
@@ -151,16 +172,27 @@ int load_case(struct run_parameter parameter)
             write_log(parameter.log_path, "打开文件写入测试用例 打开文件失败");
             return -1;
         }
-        fprintf(fp, "%s", row[0]);
+        char* hin = (char*)malloc(sizeof(char) * (strlen(row[0]) + 1));
+        memset(hin, 0, sizeof(hin));
+        strcpy(hin, row[0]);
+        strrpc(hin, "\r\n", "\n");
+        fprintf(fp, "%s", hin);
         fclose(fp);
+        free(hin);
+
         sprintf(file_path_arr, "%s/%d.out", parameter.case_path, i);
         fp = fopen(file_path_arr, "w");
         if (fp == NULL) {
             write_log(parameter.log_path, "打开文件写入测试用例 打开文件失败");
             return -1;
         }
-        fprintf(fp, "%s", row[1]);
+        char* hout = (char*)malloc(sizeof(char) * (strlen(row[1]) + 1));
+        memset(hout, 0, sizeof(hout));
+        strcpy(hout, row[1]);
+        strrpc(hout, "\r\n", "\n");
+        fprintf(fp, "%s", hout);
         fclose(fp);
+        free(hout);
     }
     mysql_close(conn);
     mysql_free_result(res);
