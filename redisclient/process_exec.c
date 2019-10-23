@@ -148,7 +148,8 @@ const char* exec_child(int judge_flag, const char* str, int* status)
             write_log(log_path, err);
         }
     } else {
-        write_log(log_path, "编译错误");
+        if (debug_mode)
+            write_log(log_path, "编译错误");
         retjson = cJSON_CreateObject();
         cJSON_AddNumberToObject(retjson, "submit_id", receive_submit_id->valueint);
         cJSON_AddNumberToObject(retjson, "result", 0);

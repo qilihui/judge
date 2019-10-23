@@ -297,10 +297,10 @@ struct run_result run(struct run_parameter parameter)
 
             char x[100];
             getcwd(x, sizeof(x));
-            if (parameter.debug_mode)
+            if (parameter.debug_mode) {
                 write_log(parameter.log_path, x);
-            if (parameter.debug_mode)
                 write_log(parameter.log_path, "执行chroot");
+            }
             if (chroot(parameter.file_path)) {
                 printf("%s\n", strerror(errno));
                 write_log(parameter.log_path, strerror(errno));
