@@ -21,7 +21,7 @@ void *timeout_killer(void *timeout_killer_args) {
     }
     // usleep can't be used, for time args must < 1000ms
     // this may sleep longer that expected, but we will have a check at the end
-    if (sleep((unsigned int)((timeout + 2000) / 1000)) != 0) {
+    if (sleep((unsigned int)((timeout + 1000) / 1000)) != 0) {
         kill_pid(pid);
         return NULL;
     }
