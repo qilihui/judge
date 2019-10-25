@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "killer.h"
+#include <pthread.h>
 const char* user_ip = "";
 const char* user_port = "";
 const char* user_user = "";
@@ -312,9 +314,20 @@ struct run_result run(struct run_parameter parameter)
             exit(0);
 
         } else {
+            //创建线程监控子进程 超时kill
+            pthread_t tid;
+            struct timeout_killer_args killer_args;
+            killer_args.pid = pid;
+            killer_args.timeout = parameter.time;
+            if (pthread_create(&tid, NULL, timeout_killer, (void *) (&killer_args)) != 0) {
+                kill_pid(pid);
+            }
+
             struct rusage rusage;
             int status;
             wait4(pid, &status, __WALL, &rusage);
+            //取消线程
+            pthread_cancel(tid);
 
             //总时间=用户态时间+内核态时间
             int tempvar_time = 0;
