@@ -351,11 +351,13 @@ struct run_result run(struct run_parameter parameter)
             //子进程执行exit
             if (WIFEXITED(status)) {
                 //异常退出  exit(!0)
-                if (WEXITSTATUS(status)) {
-                    result.exit_code = WEXITSTATUS(status);
+                if (WEXITSTATUS(status) == 3) {
                     result.result = __RESULT_SYSTEM_ERROR__;
-                    break;
+                } else {
+                    result.result = __RESULT_RUNNING_ERROR__;
                 }
+                result.exit_code = WEXITSTATUS(status);
+                break;
             }
 
             //其他情况为正常return退出 和 exit(0)退出
