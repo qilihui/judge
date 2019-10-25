@@ -1,9 +1,11 @@
 #include "run.h"
+#include "killer.h"
 #include "write_log.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <mysql/mysql.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +14,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "killer.h"
-#include <pthread.h>
 const char* user_ip = "";
 const char* user_port = "";
 const char* user_user = "";
@@ -319,7 +319,7 @@ struct run_result run(struct run_parameter parameter)
             struct timeout_killer_args killer_args;
             killer_args.pid = pid;
             killer_args.timeout = parameter.time;
-            if (pthread_create(&tid, NULL, timeout_killer, (void *) (&killer_args)) != 0) {
+            if (pthread_create(&tid, NULL, timeout_killer, (void*)(&killer_args)) != 0) {
                 kill_pid(pid);
             }
 
@@ -353,11 +353,13 @@ struct run_result run(struct run_parameter parameter)
                 //异常退出  exit(!0)
                 if (WEXITSTATUS(status) == 3) {
                     result.result = __RESULT_SYSTEM_ERROR__;
-                } else {
+                    result.exit_code = WEXITSTATUS(status);
+                    break;
+                } else if (WEXITSTATUS(status) != 0) {
                     result.result = __RESULT_RUNNING_ERROR__;
+                    result.exit_code = WEXITSTATUS(status);
+                    break;
                 }
-                result.exit_code = WEXITSTATUS(status);
-                break;
             }
 
             //其他情况为正常return退出 和 exit(0)退出

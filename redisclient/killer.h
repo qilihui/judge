@@ -1,5 +1,6 @@
 #ifndef __KILLER__
 #define __KILLER__
+#include <fcntl.h>
 
 struct timeout_killer_args {
     int pid;
