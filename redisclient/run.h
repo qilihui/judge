@@ -7,6 +7,7 @@
 #define __RESULT_TIME_LIMIT_EXCEEDED__ 4
 #define __RESULT_MEMORY_LIMIT_EXCEEDED__ 5
 #define __RESULT_SYSTEM_ERROR__ 6
+#define __RESULT_OUTPUT_LIMIT_EXCEEDED__ 7
 //运行所需要的参数
 struct run_parameter
 {

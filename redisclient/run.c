@@ -29,12 +29,14 @@ int compare_out(FILE* f1, FILE* f2)
 {
     if (f1 != NULL && f2 != NULL) {
         int c1 = 0, c2 = 0;
+        int ch = 10;
         do {
             if (c1 != c2) {
                 return __RESULT_WRONG_ANSWER__;
             }
             c1 = fgetc(f1);
             c2 = fgetc(f2);
+            ch++;
         } while (c1 != EOF && c2 != EOF);
 
         if (c1 != EOF && c2 == EOF) {
@@ -47,6 +49,10 @@ int compare_out(FILE* f1, FILE* f2)
                     return __RESULT_WRONG_ANSWER__;
                 }
                 c2 = fgetc(f2);
+                ch--;
+                if(ch < 0){
+                    return __RESULT_OUTPUT_LIMIT_EXCEEDED__;
+                }
             } while (c2 != EOF);
             return __RESULT_ACCEPT__;
         } else {
